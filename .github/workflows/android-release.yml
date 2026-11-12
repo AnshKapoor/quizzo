@@ -74,7 +74,11 @@ jobs:
         run: |
           APK=android/app/build/outputs/apk/release/app-release.apk
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | grep -E "Signer #1 certificate (DN|SHA-256)"
+          OUT=$("$BUILD_TOOLS/apksigner" verify --print-certs "$APK")
+          echo "$OUT"
+          # Must be signed with the Quizzo release key, or updates won't install over earlier versions.
+          echo "$OUT" | grep -qi "24fa6fd816d27c596a7493992727de4fbfc2b59514297e90b820e890c86c082c" \
+            || { echo "::error::APK is not signed with the Quizzo release certificate"; exit 1; }
           cp "$APK" "quizzo-${{ steps.version.outputs.name }}.apk"
 
       - uses: actions/upload-artifact@v5
