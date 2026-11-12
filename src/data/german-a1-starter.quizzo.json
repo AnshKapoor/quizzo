@@ -1,0 +1,55 @@
+{
+  "format": "quizzo-deck",
+  "version": 1,
+  "deck": {
+    "id": "deck-de-a1-starter",
+    "title": "Deutsch A1 – Starter",
+    "description": "First words, articles, verbs and word order. Shows every card type.",
+    "language": { "target": "de", "native": "en" },
+    "tags": ["A1"],
+    "cards": [
+      { "id": "fc-hund", "type": "flashcard", "front": "der Hund", "back": "the dog", "example": "Der Hund schläft.", "tags": ["nouns"] },
+      { "id": "fc-katze", "type": "flashcard", "front": "die Katze", "back": "the cat", "example": "Die Katze ist schwarz.", "tags": ["nouns"] },
+      { "id": "fc-haus", "type": "flashcard", "front": "das Haus", "back": "the house", "example": "Das Haus ist groß.", "tags": ["nouns"] },
+      { "id": "fc-brot", "type": "flashcard", "front": "das Brot", "back": "the bread", "tags": ["nouns", "food"] },
+      { "id": "fc-morgen", "type": "flashcard", "front": "Guten Morgen!", "back": "Good morning!", "tags": ["phrases"] },
+      { "id": "fc-wiegehts", "type": "flashcard", "front": "Wie geht's?", "back": "How are you?", "example": "Danke, gut. Und dir?", "tags": ["phrases"] },
+      { "id": "fc-entschuldigung", "type": "flashcard", "front": "Entschuldigung!", "back": "Excuse me! / Sorry!", "tags": ["phrases"] },
+      { "id": "fc-sprechen", "type": "flashcard", "front": "sprechen", "back": "to speak", "example": "Er spricht Deutsch.", "explanation": "Irregular: du sprichst, er/sie/es spricht.", "tags": ["verbs"] },
+      { "id": "fc-fahren", "type": "flashcard", "front": "fahren", "back": "to drive / to go (by vehicle)", "example": "Ich fahre mit dem Bus.", "explanation": "Irregular: du fährst, er/sie/es fährt.", "tags": ["verbs"] },
+
+      { "id": "mcq-buch", "type": "mcq", "prompt": "___ Buch (the book)", "options": ["der", "die", "das"], "answer": [2], "shuffle": false, "tags": ["articles"] },
+      { "id": "mcq-tisch", "type": "mcq", "prompt": "___ Tisch (the table)", "options": ["der", "die", "das"], "answer": [0], "shuffle": false, "tags": ["articles"] },
+      { "id": "mcq-lampe", "type": "mcq", "prompt": "___ Lampe (the lamp)", "options": ["der", "die", "das"], "answer": [1], "shuffle": false, "explanation": "Most nouns ending in -e are feminine.", "tags": ["articles"] },
+      { "id": "mcq-maedchen", "type": "mcq", "prompt": "___ Mädchen (the girl)", "options": ["der", "die", "das"], "answer": [2], "shuffle": false, "explanation": "Nouns ending in -chen are always neuter, even for people.", "tags": ["articles"] },
+      { "id": "mcq-komme", "type": "mcq", "prompt": "Ich ___ aus Deutschland.", "options": ["komme", "kommst", "kommt", "kommen"], "answer": [0], "explanation": "ich komme · du kommst · er kommt · wir kommen", "tags": ["verbs"] },
+      { "id": "mcq-bahnhof", "type": "mcq", "prompt": "What does „der Bahnhof“ mean?", "options": ["the train station", "the airport", "the bus stop", "the bakery"], "answer": [0], "tags": ["nouns"] },
+      { "id": "mcq-modal", "type": "mcq", "prompt": "Select all modal verbs.", "options": ["können", "müssen", "gehen", "dürfen", "essen"], "answer": [0, 1, 3], "explanation": "The modal verbs are dürfen, können, mögen, müssen, sollen and wollen.", "tags": ["verbs"] },
+
+      { "id": "match-zahlen", "type": "match", "prompt": "Match the numbers", "pairs": [
+        { "left": "eins", "right": "1" }, { "left": "zwei", "right": "2" }, { "left": "drei", "right": "3" },
+        { "left": "vier", "right": "4" }, { "left": "fünf", "right": "5" }, { "left": "zehn", "right": "10" }
+      ], "tags": ["numbers"] },
+      { "id": "match-tage", "type": "match", "prompt": "Match the days of the week", "pairs": [
+        { "left": "Montag", "right": "Monday" }, { "left": "Dienstag", "right": "Tuesday" }, { "left": "Mittwoch", "right": "Wednesday" },
+        { "left": "Donnerstag", "right": "Thursday" }, { "left": "Freitag", "right": "Friday" }
+      ], "tags": ["time"] },
+      { "id": "match-farben", "type": "match", "prompt": "Match the colours", "pairs": [
+        { "left": "rot", "right": "red" }, { "left": "blau", "right": "blue" }, { "left": "grün", "right": "green" },
+        { "left": "gelb", "right": "yellow" }, { "left": "schwarz", "right": "black" }
+      ], "tags": ["adjectives"] },
+
+      { "id": "cloze-heisse", "type": "cloze", "text": "Ich {{heiße::heißen}} Anna.", "translation": "My name is Anna.", "tags": ["verbs"] },
+      { "id": "cloze-wohnen", "type": "cloze", "text": "Wir {{wohnen::to live}} in Berlin.", "translation": "We live in Berlin.", "tags": ["verbs"] },
+      { "id": "cloze-spricht", "type": "cloze", "text": "Er {{spricht::sprechen}} sehr gut Deutsch.", "translation": "He speaks German very well.", "explanation": "sprechen changes e → i for du and er/sie/es.", "tags": ["verbs"] },
+      { "id": "cloze-bruder", "type": "cloze", "text": "Ich habe {{einen}} Bruder und {{eine}} Schwester.", "translation": "I have a brother and a sister.", "explanation": "haben takes the accusative: der Bruder → einen Bruder, die Schwester → eine Schwester.", "tags": ["articles", "accusative"] },
+      { "id": "cloze-wetter", "type": "cloze", "text": "Das Wetter ist heute {{schön|gut}}.", "translation": "The weather is nice today.", "tags": ["adjectives"] },
+      { "id": "cloze-kaffee", "type": "cloze", "text": "Ich trinke gern {{Kaffee}}.", "translation": "I like drinking coffee.", "caseSensitive": true, "explanation": "All German nouns are capitalised.", "tags": ["nouns", "food"] },
+
+      { "id": "order-berlin", "type": "order", "prompt": "Build the sentence", "tokens": ["Morgen", "fahre", "ich", "nach", "Berlin."], "accept": ["Ich fahre morgen nach Berlin."], "translation": "Tomorrow I'm going to Berlin.", "explanation": "The conjugated verb is always in position 2 (V2 rule).", "tags": ["word order"] },
+      { "id": "order-fussball", "type": "order", "prompt": "Build the sentence (Perfekt)", "tokens": ["Ich", "habe", "gestern", "Fußball", "gespielt."], "accept": ["Gestern habe ich Fußball gespielt."], "translation": "I played football yesterday.", "explanation": "In the Perfekt, the past participle goes to the end.", "tags": ["word order", "Perfekt"] },
+      { "id": "order-helfen", "type": "order", "prompt": "Build the question", "tokens": ["Kannst", "du", "mir", "helfen?"], "translation": "Can you help me?", "explanation": "Yes/no questions start with the verb; with a modal verb the infinitive goes to the end.", "tags": ["word order", "modal verbs"] },
+      { "id": "order-dass", "type": "order", "prompt": "Build the sentence", "tokens": ["Ich", "weiß,", "dass", "er", "heute", "kommt."], "translation": "I know that he is coming today.", "explanation": "In a dass-clause the conjugated verb goes to the end.", "tags": ["word order", "subordinate clauses"] }
+    ]
+  }
+}

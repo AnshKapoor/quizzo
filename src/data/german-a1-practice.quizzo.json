@@ -1,0 +1,52 @@
+{
+  "format": "quizzo-deck",
+  "version": 1,
+  "deck": {
+    "id": "deck-de-a1-practice",
+    "title": "Deutsch A1 – Übungen",
+    "description": "Vocabulary entries, sorting, word banks, finding mistakes and dictation.",
+    "language": { "target": "de", "native": "en" },
+    "tags": ["A1"],
+    "cards": [
+      { "id": "v-tisch", "type": "vocab", "word": "Tisch", "article": "der", "plural": "Tische", "meaning": "table", "example": "Der Tisch ist neu.", "tags": ["home"] },
+      { "id": "v-lampe", "type": "vocab", "word": "Lampe", "article": "die", "plural": "Lampen", "meaning": "lamp", "example": "Die Lampe ist kaputt.", "tags": ["home"] },
+      { "id": "v-buch", "type": "vocab", "word": "Buch", "article": "das", "plural": "Bücher", "meaning": "book", "example": "Ich lese ein Buch.", "tags": ["home"] },
+      { "id": "v-stuhl", "type": "vocab", "word": "Stuhl", "article": "der", "plural": "Stühle", "meaning": "chair", "tags": ["home"] },
+      { "id": "v-tuer", "type": "vocab", "word": "Tür", "article": "die", "plural": "Türen", "meaning": "door", "example": "Mach bitte die Tür zu.", "tags": ["home"] },
+      { "id": "v-fenster", "type": "vocab", "word": "Fenster", "article": "das", "plural": "Fenster", "meaning": "window", "explanation": "Same form in the plural: das Fenster → die Fenster.", "tags": ["home"] },
+      { "id": "v-apfel", "type": "vocab", "word": "Apfel", "article": "der", "plural": "Äpfel", "meaning": "apple", "example": "Der Apfel ist rot.", "tags": ["food"] },
+      { "id": "v-zeitung", "type": "vocab", "word": "Zeitung", "article": "die", "plural": "Zeitungen", "meaning": "newspaper", "explanation": "Nouns ending in -ung are always feminine.", "tags": ["media"] },
+      { "id": "v-lesen", "type": "vocab", "word": "lesen", "meaning": "to read", "example": "Er liest gern.", "explanation": "Irregular: du liest, er/sie/es liest.", "tags": ["verbs"] },
+      { "id": "v-muede", "type": "vocab", "word": "müde", "meaning": "tired", "example": "Ich bin sehr müde.", "tags": ["adjectives"] },
+
+      { "id": "cat-artikel", "type": "categorize", "prompt": "Sort the nouns by article", "groups": [
+        { "name": "der", "items": ["Löffel", "Garten", "Montag"] },
+        { "name": "die", "items": ["Gabel", "Zeitung", "Freiheit"] },
+        { "name": "das", "items": ["Messer", "Mädchen", "Auto"] }
+      ], "explanation": "Days of the week are masculine; -ung and -heit are feminine; -chen is neuter.", "tags": ["articles"] },
+      { "id": "cat-praep", "type": "categorize", "prompt": "Which case does the preposition take?", "groups": [
+        { "name": "Akkusativ", "items": ["durch", "für", "ohne"] },
+        { "name": "Dativ", "items": ["mit", "bei", "von", "zu"] },
+        { "name": "Akk. or Dat.", "items": ["in", "auf", "an"] }
+      ], "explanation": "Two-way prepositions take the accusative for movement (wohin?) and the dative for location (wo?).", "tags": ["prepositions", "cases"] },
+      { "id": "cat-trennbar", "type": "categorize", "prompt": "Separable or inseparable?", "groups": [
+        { "name": "separable", "items": ["anrufen", "aufstehen", "einkaufen"] },
+        { "name": "inseparable", "items": ["verstehen", "besuchen", "bekommen"] }
+      ], "explanation": "Prefixes be-, ver-, ent-, er-, ge-, zer- never separate: Ich verstehe. — but: Ich rufe dich an.", "tags": ["verbs"] },
+
+      { "id": "bank-dem", "type": "cloze", "text": "Ich gebe {{dem}} Mann das Buch.", "translation": "I give the man the book.", "wordBank": true, "distractors": ["der", "den", "des"], "explanation": "geben + dative for the person: der Mann → dem Mann.", "tags": ["cases"] },
+      { "id": "bank-zur", "type": "cloze", "text": "Wir fahren {{mit}} dem Bus {{zur}} Arbeit.", "translation": "We take the bus to work.", "wordBank": true, "distractors": ["für", "nach", "zum"], "explanation": "zur = zu der (die Arbeit); zum = zu dem.", "tags": ["prepositions"] },
+      { "id": "bank-aufstehen", "type": "cloze", "text": "Ich {{stehe}} um sieben Uhr {{auf}}.", "translation": "I get up at seven o'clock.", "wordBank": true, "distractors": ["stehen", "an", "ab"], "explanation": "Separable verbs: the prefix goes to the end of the sentence.", "tags": ["verbs"] },
+
+      { "id": "spot-sein", "type": "spot", "text": "Ich [[habe|bin]] gestern nach Berlin gefahren.", "translation": "I went to Berlin yesterday.", "explanation": "Verbs of movement form the Perfekt with sein.", "tags": ["Perfekt"] },
+      { "id": "spot-maedchen", "type": "spot", "text": "Das ist [[der|das]] Mädchen von nebenan.", "translation": "That's the girl from next door.", "explanation": "-chen nouns are always neuter.", "tags": ["articles"] },
+      { "id": "spot-hund", "type": "spot", "text": "Ich habe [[ein|einen]] Hund.", "translation": "I have a dog.", "explanation": "haben takes the accusative: der Hund → einen Hund.", "tags": ["cases"] },
+      { "id": "spot-usa", "type": "spot", "text": "Ich [[kommen|komme]] aus [[der|den]] USA.", "translation": "I come from the USA.", "explanation": "ich komme; aus takes the dative, and die USA is plural → aus den USA.", "tags": ["verbs", "cases"] },
+
+      { "id": "dict-wohne", "type": "dictation", "text": "Ich wohne in Berlin.", "translation": "I live in Berlin.", "tags": ["listening"] },
+      { "id": "dict-spaet", "type": "dictation", "text": "Wie spät ist es?", "translation": "What time is it?", "tags": ["listening"] },
+      { "id": "dict-wetter", "type": "dictation", "text": "Das Wetter ist heute schön.", "translation": "The weather is nice today.", "tags": ["listening"] },
+      { "id": "dict-wiederholen", "type": "dictation", "text": "Können Sie das bitte wiederholen?", "translation": "Could you repeat that, please?", "tags": ["listening", "phrases"] }
+    ]
+  }
+}
