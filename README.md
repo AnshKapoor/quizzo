@@ -62,6 +62,21 @@ npm run android:open
 ```
 Then press Run in Android Studio.
 
+### Android releases
+
+Pushing a version tag builds a signed APK on GitHub Actions and publishes it under
+[Releases](https://github.com/AnshKapoor/quizzo/releases)
+([workflow](.github/workflows/android-release.yml)):
+```bash
+git tag v0.1.1
+```
+```bash
+git push origin v0.1.1
+```
+The signing key is not in the repo. It lives in `~/.quizzo-signing/` (keep it backed up: Android only
+accepts updates signed with the same key) and as the repository secrets `ANDROID_KEYSTORE_BASE64`,
+`ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_ALIAS`.
+
 Tests and type checks:
 ```bash
 npm test

@@ -1,0 +1,90 @@
+# Builds a signed Android APK and publishes it as a GitHub Release.
+# Trigger: push a tag like v0.1.0  (git tag v0.1.0 && git push origin v0.1.0)
+# Needs repository secrets: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS
+name: Android release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install, test and build the web app
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1' # desktop shell isn't needed here
+        run: |
+          npm ci
+          npm test
+          npm run build
+          npx cap sync android
+
+      - name: Version from tag
+        id: version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then NAME="${GITHUB_REF_NAME#v}"; else NAME="0.0.0-${GITHUB_SHA::7}"; fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          QUIZZO_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          QUIZZO_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          QUIZZO_VERSION_NAME: ${{ steps.version.outputs.name }}
+          QUIZZO_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          if [[ -z "$KEYSTORE_BASE64" ]]; then
+            echo "::error::Signing secrets are missing. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS."
+            exit 1
+          fi
+          export QUIZZO_KEYSTORE_PATH="$RUNNER_TEMP/quizzo-release.p12"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$QUIZZO_KEYSTORE_PATH"
+          cd android
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          rm -f "$QUIZZO_KEYSTORE_PATH"
+
+      - name: Check signature and rename
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | grep -E "Signer #1 certificate (DN|SHA-256)"
+          cp "$APK" "quizzo-${{ steps.version.outputs.name }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quizzo-apk
+          path: quizzo-*.apk
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" quizzo-*.apk \
+            --title "Quizzo $GITHUB_REF_NAME" \
+            --notes "Android app: download the .apk below on your phone and open it to install (allow installing from this source when asked).
+
+          Signing certificate SHA-256: 24:FA:6F:D8:16:D2:7C:59:6A:74:93:99:27:27:DE:4F:BF:C2:B5:95:14:29:7E:90:B8:20:E8:90:C8:6C:08:2C
+
+          Known limitations on Android in this version: read-aloud and dictation audio are not available yet, and \"Export JSON\" / \"Back up all\" don't save a file yet."
