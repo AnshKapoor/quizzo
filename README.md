@@ -28,7 +28,7 @@ Three ways to study a deck:
   question, and optional card-type and tag filters. Shows a countdown, a per-question review at the end, and
   keeps your last results. Saved quizzes are part of the deck file, so they are shared along with it.
 
-Other features: card editor with a live preview, text-to-speech (🔊, desktop/browser), keyboard shortcuts
+Other features: built-in help (how to create decks and write every card type, with playable examples and an example deck), card editor with a live preview and step-by-step instructions, text-to-speech (🔊, desktop/browser), keyboard shortcuts
 (Space reveals, 1–4 grade, Enter next, Esc exits), light/dark theme, phone-sized layout.
 
 ## Stack

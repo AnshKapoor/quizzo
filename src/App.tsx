@@ -10,12 +10,15 @@ import { CardEditor } from './screens/CardEditor';
 import { Study } from './screens/Study';
 import { TimedQuiz } from './screens/TimedQuiz';
 import { addAttempt } from './lib/quiz';
+import { exampleDeck } from './lib/help';
+import { Help } from './screens/Help';
 
 type View =
   | { name: 'home' }
   | { name: 'deck'; deckId: string }
   | { name: 'study'; deckId: string; mode: 'review' | 'quiz' }
   | { name: 'test'; deckId: string; quizId: string }
+  | { name: 'help'; topic?: string; from: Exclude<View, { name: 'help' }> }
   | { name: 'edit'; deckId: string; cardId?: string; type: CardType };
 
 export default function App() {
@@ -43,6 +46,7 @@ export default function App() {
   const update = (fn: (l: Library) => Library) => setLib((l) => (l ? fn(l) : l));
   const deck = 'deckId' in view ? lib.decks.find((d) => d.id === view.deckId) : undefined;
   const home = () => setView({ name: 'home' });
+  const help = (topic?: string) => setView((v) => (v.name === 'help' ? v : { name: 'help', topic, from: v }));
 
   const importFile = async (file: File) => {
     const { decks, errors } = parseImport(await readFileText(file));
@@ -61,13 +65,26 @@ export default function App() {
   };
 
   let screen;
-  if (view.name === 'home' || !deck) {
+  if (view.name === 'help') {
+    screen = (
+      <Help
+        topic={view.topic}
+        onBack={() => setView(view.from)}
+        onAddExampleDeck={() => {
+          const id = uid('deck-');
+          update((l) => L.upsertDeck(l, exampleDeck(id)));
+          setView({ name: 'deck', deckId: id });
+        }}
+      />
+    );
+  } else if (view.name === 'home' || !deck) {
     screen = (
       <Home
         library={lib}
         onOpen={(deckId) => setView({ name: 'deck', deckId })}
         onStudy={(deckId, mode) => setView({ name: 'study', deckId, mode })}
         onImport={importFile}
+        onHelp={() => help()}
         onNewDeck={() => {
           const id = uid('deck-');
           update((l) => L.upsertDeck(l, { id, title: 'New deck', language: { target: 'de', native: 'en' }, cards: [] }));
@@ -84,6 +101,7 @@ export default function App() {
         onChange={(d) => update((l) => L.upsertDeck(l, d))}
         onStudy={(mode) => setView({ name: 'study', deckId: deck.id, mode })}
         onTimedQuiz={(quizId) => setView({ name: 'test', deckId: deck.id, quizId })}
+        onHelp={help}
         onAddCard={(type) => setView({ name: 'edit', deckId: deck.id, type })}
         onEditCard={(cardId) => {
           const c = deck.cards.find((x) => x.id === cardId);

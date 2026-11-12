@@ -9,9 +9,10 @@ interface Props {
   onStudy: (deckId: string, mode: 'review' | 'quiz') => void;
   onNewDeck: () => void;
   onImport: (file: File) => void;
+  onHelp: () => void;
 }
 
-export function Home({ library, onOpen, onStudy, onNewDeck, onImport }: Props) {
+export function Home({ library, onOpen, onStudy, onNewDeck, onImport, onHelp }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
 
   return (
@@ -35,6 +36,9 @@ export function Home({ library, onOpen, onStudy, onNewDeck, onImport }: Props) {
           >
             Back up all
           </button>
+          <button type="button" className="ghost" onClick={onHelp}>
+            ? Help
+          </button>
           <input
             ref={fileInput}
             type="file"
@@ -52,6 +56,12 @@ export function Home({ library, onOpen, onStudy, onNewDeck, onImport }: Props) {
       {library.decks.length === 0 && (
         <div className="empty">
           <p>No decks yet. Create one or import a .json deck file.</p>
+          <p>
+            New here?{' '}
+            <button type="button" onClick={onHelp}>
+              Read the help
+            </button>
+          </p>
         </div>
       )}
 

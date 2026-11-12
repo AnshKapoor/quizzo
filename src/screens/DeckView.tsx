@@ -16,6 +16,7 @@ interface Props {
   onChange: (deck: Deck) => void;
   onStudy: (mode: 'review' | 'quiz') => void;
   onTimedQuiz: (quizId: string) => void;
+  onHelp: (topic?: string) => void;
   onAddCard: (type: CardType) => void;
   onEditCard: (cardId: string) => void;
   onDeleteCard: (cardId: string) => void;
@@ -55,6 +56,9 @@ export function DeckView(p: Props) {
           ← Decks
         </button>
         <div className="row">
+          <button type="button" className="ghost" onClick={() => p.onHelp('decks')}>
+            ? Help
+          </button>
           <button type="button" className="primary" onClick={() => p.onStudy('review')}>
             Study
           </button>
@@ -117,6 +121,15 @@ export function DeckView(p: Props) {
       <section className="quizzes">
         <div className="row wrap section-head">
           <h2>Timed quizzes</h2>
+          <button
+            type="button"
+            className="icon-btn help-link"
+            title="How timed quizzes work"
+            aria-label="How timed quizzes work"
+            onClick={() => p.onHelp('timed')}
+          >
+            ?
+          </button>
           <span className="spacer" />
           {!editing && (
             <button type="button" disabled={!stats.total} onClick={() => setEditing(newQuizPreset())}>
@@ -169,6 +182,9 @@ export function DeckView(p: Props) {
       <section>
         <div className="row wrap add-row">
           <strong>Add card:</strong>
+          <button type="button" className="ghost help-link" onClick={() => p.onHelp('types')}>
+            Which type?
+          </button>
           {TYPES.map((t) => (
             <button key={t} type="button" onClick={() => p.onAddCard(t)}>
               + {CARD_TYPE_LABELS[t]}
@@ -208,7 +224,14 @@ export function DeckView(p: Props) {
               </button>
             </li>
           ))}
-          {cards.length === 0 && <li className="sub">No cards here yet.</li>}
+          {cards.length === 0 && (
+            <li className="sub">
+              No cards here yet. Pick a type under "Add card" above.
+              <button type="button" className="ghost help-link" onClick={() => p.onHelp('cards')}>
+                How do I add cards?
+              </button>
+            </li>
+          )}
         </ul>
       </section>
     </div>

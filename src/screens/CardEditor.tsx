@@ -4,6 +4,8 @@ import { CARD_TYPE_LABELS, cardToForm, emptyForm, formToCard, type CardForm } fr
 import { uid } from '../lib/util';
 import { expandCard, VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
+import { CARD_HELP } from '../lib/help';
+import { Help } from './Help';
 
 interface Props {
   deck: Deck;
@@ -55,6 +57,14 @@ export function CardEditor({ deck, card, type, onSave, onCancel }: Props) {
     </label>
   );
 
+  /** Help is shown in place of the editor, so what has been typed is kept. */
+  const [helpTopic, setHelpTopic] = useState<string | null>(null);
+  const help = CARD_HELP[form.type];
+  const isEmpty = JSON.stringify(form) === JSON.stringify(emptyForm(form.type));
+  const fillExample = () => {
+    if (isEmpty || confirm('Replace what you have typed with the example?')) setForm(cardToForm(help.example));
+  };
+
   const save = (another: boolean) => {
     if (result.card) {
       onSave(result.card, another);
@@ -64,6 +74,8 @@ export function CardEditor({ deck, card, type, onSave, onCancel }: Props) {
       }
     }
   };
+
+  if (helpTopic) return <Help topic={helpTopic} onBack={() => setHelpTopic(null)} />;
 
   return (
     <div className="screen editor">
@@ -96,6 +108,25 @@ export function CardEditor({ deck, card, type, onSave, onCancel }: Props) {
               ))}
             </select>
           </label>
+
+          <details className="help-box" open={!card}>
+            <summary>How to write a {CARD_TYPE_LABELS[form.type].toLowerCase()} card</summary>
+            <p>{help.summary}</p>
+            <p className="sub">Good for: {help.goodFor}</p>
+            <ol>
+              {help.steps.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+            <div className="row wrap">
+              <button type="button" onClick={fillExample}>
+                Fill in an example
+              </button>
+              <button type="button" className="ghost" onClick={() => setHelpTopic(form.type)}>
+                More help
+              </button>
+            </div>
+          </details>
 
           {form.type === 'flashcard' && (
             <>
