@@ -46,7 +46,18 @@
       { "id": "dict-wohne", "type": "dictation", "text": "Ich wohne in Berlin.", "translation": "I live in Berlin.", "tags": ["listening"] },
       { "id": "dict-spaet", "type": "dictation", "text": "Wie spät ist es?", "translation": "What time is it?", "tags": ["listening"] },
       { "id": "dict-wetter", "type": "dictation", "text": "Das Wetter ist heute schön.", "translation": "The weather is nice today.", "tags": ["listening"] },
-      { "id": "dict-wiederholen", "type": "dictation", "text": "Können Sie das bitte wiederholen?", "translation": "Could you repeat that, please?", "tags": ["listening", "phrases"] }
+      { "id": "dict-wiederholen", "type": "dictation", "text": "Können Sie das bitte wiederholen?", "translation": "Could you repeat that, please?", "tags": ["listening", "phrases"] },
+
+      { "id": "seq-cafe", "type": "sequence", "prompt": "Put the conversation in the café in order", "items": ["Guten Tag! Was möchten Sie?", "Einen Kaffee, bitte.", "Mit Milch?", "Ja, gern.", "Das macht 2,80 Euro."], "tags": ["phrases"] },
+      { "id": "seq-tage", "type": "sequence", "prompt": "Order the days of the week, starting with Monday", "items": ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag"], "tags": ["time"] },
+      { "id": "seq-morgen", "type": "sequence", "prompt": "Put Anna's morning in order", "items": ["Anna wacht um 7 Uhr auf.", "Dann steht sie auf.", "Sie duscht.", "Sie frühstückt.", "Um 8 Uhr fährt sie zur Arbeit."], "explanation": "Separable verbs: aufwachen → sie wacht auf, aufstehen → sie steht auf.", "tags": ["verbs"] },
+
+      { "id": "tab-sein-haben", "type": "table", "prompt": "Conjugate sein and haben", "columns": ["", "sein", "haben"], "rows": [["ich", "bin", "habe"], ["du", "bist", "hast"], ["er/sie/es", "ist", "hat"], ["wir", "sind", "haben"], ["ihr", "seid", "habt"]], "distractors": ["seit", "hab"], "explanation": "Both verbs are irregular. Learn them by heart: they are also used to build the perfect tense.", "tags": ["verbs"] },
+      { "id": "tab-artikel", "type": "table", "prompt": "Definite articles: nominative and accusative", "columns": ["", "Nominativ", "Akkusativ"], "rows": [["maskulin", "der", "den"], ["feminin", "die", "die"], ["neutral", "das", "das"]], "distractors": ["dem"], "explanation": "Only the masculine article changes in the accusative: der → den.", "tags": ["cases"] }
+    ],
+    "quizzes": [
+      { "id": "q-a1-test", "title": "A1 quick test", "questions": 10, "timeLimit": 300, "perQuestion": 0 },
+      { "id": "q-a1-speed", "title": "Speed round: verbs", "questions": 8, "timeLimit": 0, "perQuestion": 30, "tags": ["verbs"] }
     ]
   }
 }

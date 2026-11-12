@@ -26,6 +26,10 @@ export interface CardForm {
   accept: string;
   /** One group per line: "der: Tisch, Hund". */
   groups: string;
+  /** Sequence: one item per line, in the correct order. */
+  items: string;
+  /** Table: one row per line, cells separated by "|"; the first line holds the headers. */
+  table: string;
   word: string;
   article: '' | 'der' | 'die' | 'das';
   plural: string;
@@ -46,6 +50,8 @@ export const CARD_TYPE_LABELS: Record<CardType, string> = {
   categorize: 'Sort into groups',
   spot: 'Find the mistake',
   dictation: 'Dictation',
+  sequence: 'Sequence',
+  table: 'Fill the table',
 };
 
 export function emptyForm(type: CardType): CardForm {
@@ -66,6 +72,8 @@ export function emptyForm(type: CardType): CardForm {
     tokens: '',
     accept: '',
     groups: '',
+    items: '',
+    table: '',
     word: '',
     article: '',
     plural: '',
@@ -118,6 +126,15 @@ export function cardToForm(card: Card): CardForm {
       break;
     case 'dictation':
       Object.assign(f, { text: card.text, translation: card.translation ?? '', caseSensitive: !!card.caseSensitive });
+      break;
+    case 'sequence':
+      f.prompt = card.prompt ?? '';
+      f.items = card.items.join('\n');
+      break;
+    case 'table':
+      f.prompt = card.prompt ?? '';
+      f.table = [card.columns, ...card.rows].map((r) => r.join(' | ')).join('\n');
+      f.distractors = (card.distractors ?? []).join(', ');
       break;
     case 'vocab':
       Object.assign(f, {
@@ -217,6 +234,22 @@ export function formToCard(f: CardForm, id: string): { card?: Card; error?: stri
         caseSensitive: f.caseSensitive || undefined,
       };
       break;
+    case 'sequence':
+      card = { ...base, type: 'sequence', prompt: opt(f.prompt), items: lines(f.items) };
+      break;
+    case 'table': {
+      const [columns = [], ...rows] = lines(f.table).map((l) => l.split('|').map((c) => c.trim()));
+      const distractors = list(f.distractors);
+      card = {
+        ...base,
+        type: 'table',
+        prompt: opt(f.prompt),
+        columns,
+        rows,
+        distractors: distractors.length ? distractors : undefined,
+      };
+      break;
+    }
     case 'vocab':
       card = {
         ...base,
@@ -253,6 +286,10 @@ export function cardSummary(card: Card): string {
       return card.text.replace(/\[\[(.+?)\|.*?\]\]/g, '[$1]');
     case 'dictation':
       return card.text;
+    case 'sequence':
+      return card.prompt || card.items.join(' → ');
+    case 'table':
+      return card.prompt || card.columns.join(' / ');
     case 'vocab':
       return `${card.article ? card.article + ' ' : ''}${card.word}${card.plural ? `, die ${card.plural}` : ''} → ${card.meaning}`;
   }

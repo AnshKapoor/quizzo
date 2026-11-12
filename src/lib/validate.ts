@@ -1,4 +1,4 @@
-import type { Card, Deck } from '../types';
+import type { Card, CardType, Deck, QuizPreset } from '../types';
 import { blankCount } from './cloze';
 import { parseSpot } from './spot';
 import { uid } from './util';
@@ -49,6 +49,18 @@ export function validateCard(c: any): string | null {
       if (!isStrArr(c.tokens) || c.tokens.length < 2) return 'order needs at least 2 "tokens"';
       if (c.accept !== undefined && !isStrArr(c.accept)) return 'order "accept" must be a list of sentences';
       return null;
+    case 'sequence':
+      if (!isStrArr(c.items) || c.items.filter((x: string) => x.trim()).length < 2)
+        return 'sequence needs at least 2 "items" (in the correct order)';
+      return null;
+    case 'table': {
+      if (!isStrArr(c.columns) || c.columns.length < 2) return 'table needs at least 2 "columns" (headers)';
+      if (!Array.isArray(c.rows) || c.rows.length === 0) return 'table needs at least one row';
+      const bad = c.rows.findIndex((r: unknown) => !isStrArr(r) || r.length !== c.columns.length || !r.every(isStr));
+      if (bad >= 0) return `table row ${bad + 1} needs ${c.columns.length} filled cells (one per column)`;
+      if (c.distractors !== undefined && !isStrArr(c.distractors)) return 'table "distractors" must be a list of words';
+      return null;
+    }
     default:
       return `unknown card type "${c.type}"`;
   }
@@ -87,9 +99,42 @@ export function validateDeck(d: any): { deck?: Deck; errors: string[] } {
       },
       tags: isStrArr(d.tags) ? d.tags : undefined,
       cards,
+      quizzes: validateQuizzes(d.quizzes, errors),
     },
     errors,
   };
+}
+
+export const CARD_TYPES: CardType[] = [
+  'vocab', 'flashcard', 'mcq', 'match', 'cloze', 'order', 'categorize', 'spot', 'dictation', 'sequence', 'table',
+];
+
+const count = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v) : 0);
+
+/** Keeps the well-formed timed quizzes of a deck; drops (and reports) the rest. */
+function validateQuizzes(raw: unknown, errors: string[]): QuizPreset[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: QuizPreset[] = [];
+  raw.forEach((q: any, i) => {
+    if (!q || typeof q !== 'object' || !isStr(q.title)) {
+      errors.push(`timed quiz #${i + 1}: needs a "title"`);
+      return;
+    }
+    const types = isStrArr(q.types) ? (q.types.filter((t: string) => CARD_TYPES.includes(t as CardType)) as CardType[]) : [];
+    const tags = isStrArr(q.tags) ? q.tags.filter(isStr) : [];
+    let id = isStr(q.id) ? q.id : uid('q-');
+    while (out.some((x) => x.id === id)) id = uid('q-');
+    out.push({
+      id,
+      title: q.title,
+      questions: count(q.questions),
+      timeLimit: count(q.timeLimit),
+      perQuestion: count(q.perQuestion),
+      ...(types.length ? { types } : {}),
+      ...(tags.length ? { tags } : {}),
+    });
+  });
+  return out.length ? out : undefined;
 }
 
 /**

@@ -9,7 +9,9 @@ export type CardType =
   | 'categorize'
   | 'spot'
   | 'dictation'
-  | 'vocab';
+  | 'vocab'
+  | 'sequence'
+  | 'table';
 
 interface BaseCard {
   id: string;
@@ -108,6 +110,26 @@ export interface OrderCard extends BaseCard {
   translation?: string;
 }
 
+/** Drag the lines into the right order (steps, dialogue lines, days of the week). `items` is the correct order. */
+export interface SequenceCard extends BaseCard {
+  type: 'sequence';
+  prompt?: string;
+  items: string[];
+}
+
+/**
+ * Fill the table by dragging words into the cells, e.g. a conjugation table.
+ * `columns` are the headers; the first cell of each row is its label and is shown, the other cells are blanks.
+ */
+export interface TableCard extends BaseCard {
+  type: 'table';
+  prompt?: string;
+  columns: string[];
+  rows: string[][];
+  /** Extra wrong words for the word bank. */
+  distractors?: string[];
+}
+
 export type Card =
   | FlashcardCard
   | McqCard
@@ -117,7 +139,9 @@ export type Card =
   | CategorizeCard
   | SpotCard
   | DictationCard
-  | VocabCard;
+  | VocabCard
+  | SequenceCard
+  | TableCard;
 
 /** Cards that can be shown directly. Vocab entries are expanded into these first. */
 export type StudyCard = Exclude<Card, VocabCard>;
@@ -138,6 +162,36 @@ export interface Deck {
   language: { target: string; native: string };
   tags?: string[];
   cards: Card[];
+  /** Saved timed quizzes (tests) for this deck. */
+  quizzes?: QuizPreset[];
+}
+
+/** A timed quiz set up for a deck, so the same test can be taken again or shared with the deck file. */
+export interface QuizPreset {
+  id: string;
+  title: string;
+  /** How many questions to draw. 0 = all matching questions. */
+  questions: number;
+  /** Time for the whole quiz in seconds. 0 = no overall limit. */
+  timeLimit: number;
+  /** Seconds per question; when it runs out the question counts as missed. 0 = no limit. */
+  perQuestion: number;
+  /** Only use these card types (empty / missing = all). */
+  types?: CardType[];
+  /** Only use cards with at least one of these tags (empty / missing = all). */
+  tags?: string[];
+}
+
+/** One finished timed quiz. */
+export interface QuizAttempt {
+  deckId: string;
+  quizId: string;
+  /** Epoch ms when it finished. */
+  at: number;
+  correct: number;
+  total: number;
+  /** Seconds taken. */
+  seconds: number;
 }
 
 /** One exported deck file (*.quizzo.json). */
@@ -170,6 +224,8 @@ export interface Library {
   progress: Record<string, CardProgress>;
   /** Built-in deck ids this library has already received (so deleted ones aren't re-added). */
   seeded?: string[];
+  /** Results of timed quizzes, newest last. */
+  attempts?: QuizAttempt[];
 }
 
 export interface AnswerResult {

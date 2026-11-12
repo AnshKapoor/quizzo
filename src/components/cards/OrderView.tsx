@@ -3,6 +3,7 @@ import type { OrderCard } from '../../types';
 import { sameSentence } from '../../lib/answer';
 import { shuffleIndexes } from '../../lib/util';
 import { Explanation, Feedback, SpeakButton } from '../common';
+import { useDragDrop } from '../useDragDrop';
 import type { CardViewProps } from './CardView';
 
 export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
@@ -23,31 +24,48 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
 
   const locked = result !== null;
 
+  // Drag a word into the sentence (onto a word = insert before it), within it, or back to the pool.
+  const startDrag = useDragDrop<number>((tok, zone) => {
+    if (locked) return;
+    setBuilt((b) => {
+      const rest = b.filter((i) => i !== tok);
+      if (zone === 'pool') return rest;
+      if (zone === 'line') return [...rest, tok];
+      const target = b[Number(zone.slice(2))];
+      if (target === undefined || target === tok) return b;
+      rest.splice(rest.indexOf(target), 0, tok);
+      return rest;
+    });
+  });
+
   return (
     <div className="card-body">
       <div className="prompt">{card.prompt || 'Put the words in order'}</div>
       {card.translation && <div className="sub translation">{card.translation}</div>}
-      <div className={`order-line ${locked ? (result ? 'correct' : 'wrong') : ''}`}>
-        {built.length === 0 && <span className="placeholder">Tap the words below…</span>}
+      <div data-drop="line" className={`order-line dropzone ${locked ? (result ? 'correct' : 'wrong') : ''}`}>
+        {built.length === 0 && <span className="placeholder">Tap or drag the words below…</span>}
         {built.map((i, k) => (
           <button
             key={i}
             type="button"
-            className="token"
+            data-drop={`w:${k}`}
+            className="token draggable"
             disabled={locked}
+            onPointerDown={(e) => startDrag(e, i)}
             onClick={() => setBuilt((b) => b.filter((_, j) => j !== k))}
           >
             {card.tokens[i]}
           </button>
         ))}
       </div>
-      <div className="order-pool">
+      <div data-drop="pool" className="order-pool">
         {pool.map((i) => (
           <button
             key={i}
             type="button"
-            className={`token ${built.includes(i) ? 'used' : ''}`}
+            className={`token draggable ${built.includes(i) ? 'used' : ''}`}
             disabled={locked || built.includes(i)}
+            onPointerDown={(e) => startDrag(e, i)}
             onClick={() => setBuilt((b) => [...b, i])}
           >
             {card.tokens[i]}

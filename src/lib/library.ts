@@ -20,11 +20,16 @@ export function removeDeck(lib: Library, deckId: string): Library {
     ...lib,
     decks: lib.decks.filter((d) => d.id !== deckId),
     progress: dropProgress(lib, (k) => k.startsWith(deckId + ':')),
+    attempts: lib.attempts?.filter((a) => a.deckId !== deckId),
   };
 }
 
 export function resetDeckProgress(lib: Library, deckId: string): Library {
-  return { ...lib, progress: dropProgress(lib, (k) => k.startsWith(deckId + ':')) };
+  return {
+    ...lib,
+    progress: dropProgress(lib, (k) => k.startsWith(deckId + ':')),
+    attempts: lib.attempts?.filter((a) => a.deckId !== deckId),
+  };
 }
 
 export function saveCard(lib: Library, deckId: string, card: Card): Library {

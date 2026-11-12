@@ -209,6 +209,32 @@ export function CardEditor({ deck, card, type, onSave, onCancel }: Props) {
             </>
           )}
 
+          {form.type === 'sequence' && (
+            <>
+              {text('prompt', 'Instruction', { placeholder: 'Put the conversation in order' })}
+              {text('items', 'Lines in the correct order', {
+                rows: 6,
+                placeholder: 'Guten Tag!\nGuten Tag. Was möchten Sie?\nEinen Kaffee, bitte.\nGern. Das macht 2,50 €.',
+                help: 'One per line, top to bottom. They are shuffled when studying.',
+              })}
+            </>
+          )}
+
+          {form.type === 'table' && (
+            <>
+              {text('prompt', 'Instruction', { placeholder: 'Conjugate sein and haben' })}
+              {text('table', 'Table', {
+                rows: 7,
+                placeholder: 'Person | sein | haben\nich | bin | habe\ndu | bist | hast\ner/sie/es | ist | hat',
+                help: 'First line = column headers. Then one row per line, cells separated by |. The first cell of each row is shown; the others are dragged in.',
+              })}
+              {text('distractors', 'Extra wrong words for the bank', {
+                placeholder: 'seid, habt',
+                help: 'Optional, comma separated.',
+              })}
+            </>
+          )}
+
           {text('hint', 'Hint (optional)')}
           {text('explanation', 'Explanation shown after answering (optional)', { rows: 2 })}
           {text('tags', 'Tags', { placeholder: 'A1, verbs' })}

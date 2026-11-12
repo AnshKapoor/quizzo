@@ -8,7 +8,9 @@ import { FlashcardView } from './FlashcardView';
 import { MatchView } from './MatchView';
 import { McqView } from './McqView';
 import { OrderView } from './OrderView';
+import { SequenceView } from './SequenceView';
 import { SpotView } from './SpotView';
+import { TableView } from './TableView';
 
 export interface CardViewProps<C extends StudyCard = StudyCard> {
   card: C;
@@ -35,6 +37,8 @@ export function CardView(props: CardViewProps) {
       {card.type === 'categorize' && <CategorizeView {...props} card={card} />}
       {card.type === 'spot' && <SpotView {...props} card={card} />}
       {card.type === 'dictation' && <DictationView {...props} card={card} />}
+      {card.type === 'sequence' && <SequenceView {...props} card={card} />}
+      {card.type === 'table' && <TableView {...props} card={card} />}
     </div>
   );
 }

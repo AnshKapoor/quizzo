@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import type { CardType, Deck, Library } from '../types';
+import type { CardType, Deck, Library, QuizPreset } from '../types';
 import { CARD_TYPE_LABELS, cardSummary } from '../lib/cardForm';
 import { cardDue, deckStats } from '../lib/library';
+import { newQuizPreset, percent, quizAttempts, quizPool, quizSummary } from '../lib/quiz';
+import { QuizPresetForm } from '../components/QuizPresetForm';
 import { deckToFile, downloadJson, slug } from '../lib/storage';
 
 const LANGUAGES: Record<string, string> = { de: 'German', fr: 'French', es: 'Spanish', it: 'Italian', en: 'English' };
@@ -13,6 +15,7 @@ interface Props {
   onBack: () => void;
   onChange: (deck: Deck) => void;
   onStudy: (mode: 'review' | 'quiz') => void;
+  onTimedQuiz: (quizId: string) => void;
   onAddCard: (type: CardType) => void;
   onEditCard: (cardId: string) => void;
   onDeleteCard: (cardId: string) => void;
@@ -30,6 +33,18 @@ function dueLabel(due: number | undefined): string {
 export function DeckView(p: Props) {
   const { deck, library } = p;
   const [filter, setFilter] = useState<CardType | 'all'>('all');
+  /** The timed quiz being created or edited. */
+  const [editing, setEditing] = useState<QuizPreset | null>(null);
+  const quizzes = deck.quizzes ?? [];
+  const saveQuiz = (q: QuizPreset) => {
+    const exists = quizzes.some((x) => x.id === q.id);
+    p.onChange({ ...deck, quizzes: exists ? quizzes.map((x) => (x.id === q.id ? q : x)) : [...quizzes, q] });
+    setEditing(null);
+  };
+  const deleteQuiz = (id: string) => {
+    const rest = quizzes.filter((x) => x.id !== id);
+    p.onChange({ ...deck, quizzes: rest.length ? rest : undefined });
+  };
   const stats = deckStats(deck, library);
   const cards = filter === 'all' ? deck.cards : deck.cards.filter((c) => c.type === filter);
 
@@ -97,6 +112,58 @@ export function DeckView(p: Props) {
             Delete deck
           </button>
         </div>
+      </section>
+
+      <section className="quizzes">
+        <div className="row wrap section-head">
+          <h2>Timed quizzes</h2>
+          <span className="spacer" />
+          {!editing && (
+            <button type="button" disabled={!stats.total} onClick={() => setEditing(newQuizPreset())}>
+              + New timed quiz
+            </button>
+          )}
+        </div>
+        {editing && (
+          <QuizPresetForm key={editing.id} deck={deck} quiz={editing} onSave={saveQuiz} onCancel={() => setEditing(null)} />
+        )}
+        {quizzes.length === 0 && !editing && (
+          <p className="sub">Set up a test with a time limit, e.g. 10 questions in 5 minutes. It is saved with the deck.</p>
+        )}
+        {quizzes.length > 0 && (
+          <ul className="card-list quiz-list">
+            {quizzes.map((q) => {
+              const runs = quizAttempts(library, deck.id, q.id);
+              const last = runs[runs.length - 1];
+              return (
+                <li key={q.id}>
+                  <div className="quiz-info">
+                    <strong>{q.title}</strong>
+                    <span className="sub">
+                      {quizSummary(q, quizPool(deck, q).length)}
+                      {last && ` · last: ${last.correct}/${last.total} (${percent(last.correct, last.total)}%)`}
+                    </span>
+                  </div>
+                  <button type="button" className="primary" onClick={() => p.onTimedQuiz(q.id)}>
+                    Start
+                  </button>
+                  <button type="button" className="ghost" onClick={() => setEditing(q)}>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    title="Delete quiz"
+                    aria-label="Delete quiz"
+                    onClick={() => confirm(`Delete the quiz "${q.title}"?`) && deleteQuiz(q.id)}
+                  >
+                    🗑
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section>

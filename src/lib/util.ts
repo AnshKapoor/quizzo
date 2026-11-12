@@ -23,3 +23,11 @@ export function shuffleIndexes(n: number): number[] {
   for (let tries = 0; tries < 5 && s.every((v, i) => v === i); tries++) s = shuffle(original);
   return s;
 }
+
+/** Copy of `items` with the element at `from` moved to index `to`. */
+export function moveItem<T>(items: readonly T[], from: number, to: number): T[] {
+  const a = items.slice();
+  const [x] = a.splice(from, 1);
+  a.splice(to, 0, x);
+  return a;
+}

@@ -27,7 +27,7 @@ and listed after import.
 | field         | required | meaning                                              |
 |---------------|----------|------------------------------------------------------|
 | `id`          | no*      | unique within the deck (*generated if missing)       |
-| `type`        | yes      | `vocab`, `flashcard`, `mcq`, `match`, `cloze`, `order`, `categorize`, `spot`, `dictation` |
+| `type`        | yes      | `vocab`, `flashcard`, `mcq`, `match`, `cloze`, `order`, `categorize`, `spot`, `dictation`, `sequence`, `table` |
 | `hint`        | no       | shown before answering (flashcards)                  |
 | `explanation` | no       | grammar note shown after answering                   |
 | `tags`        | no       | list of strings                                      |
@@ -98,6 +98,23 @@ The sentence is read aloud (normal or slow) and the learner types it. Case and p
 { "type": "dictation", "text": "Wie spät ist es?", "translation": "What time is it?" }
 ```
 
+### `sequence` – drag the lines into order
+`items` is the correct order, top to bottom; they are shuffled when studying. Good for conversations, steps of a
+routine, days or months. Drag a line to its place, tap two lines to swap them, or use the ▲▼ buttons.
+```json
+{ "type": "sequence", "prompt": "Put the conversation in order",
+  "items": ["Guten Tag! Was möchten Sie?", "Einen Kaffee, bitte.", "Mit Milch?", "Ja, gern."] }
+```
+
+### `table` – fill the table
+`columns` are the headers. In each row the first cell is shown as the row label; the other cells are blanks the
+learner fills by dragging words from a bank (or tapping). Every row must have one cell per column.
+`distractors` adds wrong words to the bank. Good for conjugation and declension tables.
+```json
+{ "type": "table", "prompt": "Conjugate sein and haben", "columns": ["", "sein", "haben"],
+  "rows": [["ich", "bin", "habe"], ["du", "bist", "hast"], ["er/sie/es", "ist", "hat"]], "distractors": ["seid"] }
+```
+
 ### `vocab` – one word entry, several questions
 Write a word once and the app generates up to five questions, each scheduled separately:
 
@@ -112,6 +129,30 @@ Write a word once and the app generates up to five questions, each scheduled sep
 ```json
 { "type": "vocab", "word": "Tisch", "article": "der", "plural": "Tische", "meaning": "table", "example": "Der Tisch ist neu." }
 ```
+
+## Timed quizzes
+
+A deck can carry saved timed quizzes (tests) in `quizzes`. They travel with the deck file, so a teacher can share
+a deck together with its tests. Each run draws a fresh random set of questions.
+
+| field         | meaning                                                                   |
+|---------------|---------------------------------------------------------------------------|
+| `id`          | unique within the deck (generated if missing)                             |
+| `title`       | name shown in the app                                                     |
+| `questions`   | how many questions to draw; `0` = all matching questions                  |
+| `timeLimit`   | seconds for the whole quiz; `0` = no overall limit. At 0:00 the quiz ends |
+| `perQuestion` | seconds per question; `0` = no limit. When it runs out the question counts as missed |
+| `types`       | optional: only these card types (a `vocab` entry counts as `vocab`)       |
+| `tags`        | optional: only cards with at least one of these tags                      |
+
+```json
+"quizzes": [
+  { "id": "q-a1-test", "title": "A1 quick test", "questions": 10, "timeLimit": 300, "perQuestion": 0 },
+  { "id": "q-verbs", "title": "Speed round: verbs", "questions": 8, "timeLimit": 0, "perQuestion": 30, "tags": ["verbs"] }
+]
+```
+
+Results of finished quizzes are kept in the library (`attempts`, last 20 per quiz), not in the deck file.
 
 ## Learning progress
 

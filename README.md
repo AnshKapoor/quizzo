@@ -12,16 +12,21 @@ First focus: learning German. Decks are JSON files that are easy to import, expo
 | Multiple choice       | One answer, or "select all that apply"                            |
 | Match the following   | Pair the items in two shuffled columns (tap or drag)              |
 | Complete the sentence | Type into blanks (ä/ö/ü/ß buttons; ae/oe/ue/ss accepted), or pick from a word bank |
-| Word order            | Build the sentence from word tiles; other valid orders allowed     |
+| Word order            | Build the sentence from word tiles (tap or drag); other valid orders allowed |
 | Sort into groups      | Drag words into groups such as der / die / das                    |
 | Find the mistake      | Tap the wrong word(s); corrections shown afterwards              |
 | Dictation             | Listen (normal or slow) and type; missed words highlighted       |
+| Sequence              | Drag lines into the right order (conversations, routines, days)  |
+| Fill the table        | Drag words into table cells, e.g. a conjugation table            |
 
 Drag and drop uses pointer events, so it works with mouse and touch; every drag can also be done by tapping.
 
-Two ways to study a deck:
+Three ways to study a deck:
 - **Study**: spaced repetition (SM-2 style). Due cards plus up to 10 new ones; missed cards come back once at the end.
 - **Quiz**: 10 random cards with a score at the end.
+- **Timed quizzes**: tests saved with the deck: number of questions, a time limit for the whole quiz and/or per
+  question, and optional card-type and tag filters. Shows a countdown, a per-question review at the end, and
+  keeps your last results. Saved quizzes are part of the deck file, so they are shared along with it.
 
 Other features: card editor with a live preview, text-to-speech (🔊, desktop/browser), keyboard shortcuts
 (Space reveals, 1–4 grade, Enter next, Esc exits), light/dark theme, phone-sized layout.

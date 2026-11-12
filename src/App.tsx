@@ -8,11 +8,14 @@ import { Home } from './screens/Home';
 import { DeckView } from './screens/DeckView';
 import { CardEditor } from './screens/CardEditor';
 import { Study } from './screens/Study';
+import { TimedQuiz } from './screens/TimedQuiz';
+import { addAttempt } from './lib/quiz';
 
 type View =
   | { name: 'home' }
   | { name: 'deck'; deckId: string }
   | { name: 'study'; deckId: string; mode: 'review' | 'quiz' }
+  | { name: 'test'; deckId: string; quizId: string }
   | { name: 'edit'; deckId: string; cardId?: string; type: CardType };
 
 export default function App() {
@@ -80,6 +83,7 @@ export default function App() {
         onBack={home}
         onChange={(d) => update((l) => L.upsertDeck(l, d))}
         onStudy={(mode) => setView({ name: 'study', deckId: deck.id, mode })}
+        onTimedQuiz={(quizId) => setView({ name: 'test', deckId: deck.id, quizId })}
         onAddCard={(type) => setView({ name: 'edit', deckId: deck.id, type })}
         onEditCard={(cardId) => {
           const c = deck.cards.find((x) => x.id === cardId);
@@ -103,6 +107,27 @@ export default function App() {
         onRecord={(cardId, grade) => update((l) => L.recordAnswer(l, deck.id, cardId, grade))}
         onExit={() => setView({ name: 'deck', deckId: deck.id })}
       />
+    );
+  } else if (view.name === 'test') {
+    const quiz = deck.quizzes?.find((q) => q.id === view.quizId);
+    const back = () => setView({ name: 'deck', deckId: deck.id });
+    screen = quiz ? (
+      <TimedQuiz
+        key={`${deck.id}-${quiz.id}`}
+        deck={deck}
+        library={lib}
+        quiz={quiz}
+        onRecord={(cardId, grade) => update((l) => L.recordAnswer(l, deck.id, cardId, grade))}
+        onFinish={(attempt) => update((l) => addAttempt(l, attempt))}
+        onExit={back}
+      />
+    ) : (
+      <div className="empty">
+        <p>This quiz no longer exists.</p>
+        <button type="button" onClick={back}>
+          Back to deck
+        </button>
+      </div>
     );
   } else {
     const back = () => setView({ name: 'deck', deckId: deck.id });
