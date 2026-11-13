@@ -25,6 +25,7 @@ const SECTIONS = [
   ['custom', 'Custom quizzes'],
   ['appearance', 'Themes & layout'],
   ['files', 'Sharing decks (JSON files)'],
+  ['backup', 'Backup & other devices'],
   ['keys', 'Keyboard shortcuts'],
 ] as const;
 
@@ -323,6 +324,40 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
         <p className="sub">
           Card ids are optional. To see the JSON for any card type, create it in the app and use <b>Export JSON</b>.
           If a card in an imported file is invalid, it is skipped and the app tells you why.
+        </p>
+      </section>
+
+      <section id="help-backup" className="help-section">
+        <h2>Backup &amp; other devices</h2>
+        <p>
+          Press <b>☁ Backup</b> on the start screen. A backup holds everything: decks, timed and custom quizzes, study
+          progress, quiz results and appearance.
+        </p>
+        <ul>
+          <li>
+            <b>Google Sheet</b>: backups go into a Google Sheet that belongs to you, so you can restore them on your
+            phone or another computer. Set it up once on a computer (Backup screen → "First time"): create a Sheet, paste
+            the script Quizzo gives you into <i>Extensions → Apps Script</i>, deploy it as a web app, and paste its link
+            into Quizzo.
+          </li>
+          <li>
+            <b>On your phone</b> (or another computer): open Backup, paste the <b>connection link</b> (Copy link on the
+            first device, or the "Quizzo" tab of the Sheet), press Connect, then <b>Restore…</b> the newest backup.
+          </li>
+          <li>
+            <b>Back up automatically</b> uploads about half a minute after you change something, while Quizzo is open.
+            The Sheet keeps the 20 newest backups.
+          </li>
+          <li>
+            <b>Restore</b> can replace everything on the device (undo is offered) or only add the decks you don't have.
+          </li>
+          <li>
+            <b>Backup file</b>: the same backup as a single .json file (desktop and browser).
+          </li>
+        </ul>
+        <p className="sub">
+          Keep the connection link private: anyone who has it can read and add backups. To stop using a link, delete the
+          deployment in Apps Script (Deploy → Manage deployments).
         </p>
       </section>
 

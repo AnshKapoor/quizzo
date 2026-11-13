@@ -34,13 +34,20 @@ Three ways to study a deck:
   High contrast), question placement (Centred in the middle of the screen, Top centred, Top left), card style
   (Raised, Flat, Outlined), font and text size. Stored in the library, so a backup restores it.
 
+- **Backup & other devices** (☁ Backup on the start screen): back up everything (decks, quizzes, progress,
+  results, appearance) to a **Google Sheet** of your own and restore it on any device, including your phone. Set up once:
+  create a Sheet, paste the Apps Script that Quizzo shows into *Extensions → Apps Script*, deploy it as a web app
+  (Execute as: Me, Who has access: Anyone) and paste its URL into Quizzo. Other devices connect with the *connection
+  link* (URL + private key). Optional auto backup ~30 s after changes; the Sheet keeps the 20 newest backups.
+  Restore replaces everything (with undo) or only adds missing decks. Also available as a single backup file.
+
 Other features: built-in help (how to create decks and write every card type, with playable examples and an example deck), card editor with a live preview and step-by-step instructions, text-to-speech (🔊, desktop/browser), keyboard shortcuts
 (Space reveals, 1–4 grade, Enter next, Esc exits), phone-sized layout.
 
 ## Stack
 
 - **React + TypeScript + Vite**: the whole app, one codebase (`src/`)
-- **Electron**: desktop shell (`electron/`). Library saved to `%APPDATA%\quizzo\library.json`
+- **Electron**: desktop shell (`electron/`), packaged with electron-builder. Library saved to `%APPDATA%\Quizzo\library.json`
 - **Capacitor**: Android shell (`android/`). Library currently saved in WebView storage
 
 ## Running it
@@ -64,6 +71,11 @@ Desktop with hot reload (start `npm run dev` first, in another terminal):
 npm run desktop:dev
 ```
 
+Desktop installers (written to `release/`; `dist:win` for Windows only):
+```bash
+npm run dist
+```
+
 Android (needs Android Studio + JDK 21):
 ```bash
 npm run android:sync
@@ -73,11 +85,13 @@ npm run android:open
 ```
 Then press Run in Android Studio.
 
-### Android releases
+### Releases
 
-Pushing a version tag builds a signed APK on GitHub Actions and publishes it under
+Pushing a version tag builds the signed Android APK and the desktop apps (Windows installer + portable .exe,
+macOS .dmg, Linux AppImage) on GitHub Actions and publishes them together under
 [Releases](https://github.com/AnshKapoor/quizzo/releases)
-([workflow](.github/workflows/android-release.yml)):
+([workflow](.github/workflows/release.yml)). The desktop apps aren't code-signed, so Windows SmartScreen and
+macOS Gatekeeper warn on first start.
 ```bash
 git tag v0.1.1
 ```
@@ -104,8 +118,10 @@ src/
   data/                    built-in decks (German A1 starter + practice); new ones reach existing installs once
   lib/                     answer checking, cloze parser, scheduler, validation, storage
   components/cards/        one component per card type
-  screens/                 Home, DeckView, CardEditor, Study, TimedQuiz, QuizBuilder, Appearance, Help
-electron/                  desktop main + preload (JSON file storage)
+  screens/                 Home, DeckView, CardEditor, Study, TimedQuiz, QuizBuilder, Appearance, Backup, Help
+  lib/cloud.ts             backup files + Google Sheet backup (includes the Apps Script users paste into their Sheet)
+electron/                  desktop main + preload (JSON file storage, HTTP for cloud backup)
+build/                     app icon (icon.svg is the source of icon.png)
 android/                   generated Capacitor project
 docs/deck-format.md        JSON deck format reference
 ```
@@ -119,10 +135,11 @@ docs/deck-format.md        JSON deck format reference
 
 ## Known gaps / next steps
 
-- Android: export uses a browser download, which the WebView can't do. Add `@capacitor/filesystem` + `@capacitor/share`.
+- Android: saving files (deck export, backup file) uses a browser download, which the WebView can't do. Add
+  `@capacitor/filesystem` + `@capacitor/share`. Google Sheet backup works there.
 - Android: no text-to-speech in the WebView yet (needs a Capacitor TTS plugin), so dictation falls back to showing
   the sentence. Store the library in a file rather than WebView storage.
 - Vocabulary: start new words as multiple choice and switch to typing once they're known.
-- Desktop installers: add `electron-builder`.
+- Desktop: code signing, auto-update (electron-updater), use the app icon for Android too.
 - Card ideas: conjugation/declension tables, rewrite-the-sentence, label a picture, reading passages, speaking.
 - More languages: `deck.language.target` already drives TTS and the special-character bar.

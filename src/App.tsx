@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CardType, CustomQuiz, Library } from './types';
 import * as L from './lib/library';
 import { loadLibrary, readFileText, saveLibrary } from './lib/storage';
@@ -24,6 +24,11 @@ import { Appearance } from './screens/Appearance';
 import { QuizBuilder } from './screens/QuizBuilder';
 import { exampleDeck } from './lib/help';
 import { Help } from './screens/Help';
+import { Backup } from './screens/Backup';
+import { backupPayload, CloudClient, defaultDeviceName, fingerprint } from './lib/cloud';
+
+/** Auto backup waits this long after the last change, so a study session isn't uploaded answer by answer. */
+const AUTO_BACKUP_DELAY = 30_000;
 
 type View =
   | { name: 'home' }
@@ -32,6 +37,7 @@ type View =
   | { name: 'test'; deckId: string; quizId: string }
   | { name: 'help'; topic?: string; from: Exclude<View, { name: 'help' }> }
   | { name: 'appearance'; from: View }
+  | { name: 'backup' }
   | { name: 'custom-edit'; quiz: CustomQuiz; isNew: boolean }
   | { name: 'custom-test'; quizId: string }
   | { name: 'edit'; deckId: string; cardId?: string; type: CardType };
@@ -55,6 +61,32 @@ export default function App() {
     }, 300);
     return () => clearTimeout(t);
   }, [lib]);
+
+  // ---- cloud backup (Google Sheet) ----
+  const libRef = useRef(lib);
+  libRef.current = lib;
+  const [autoError, setAutoError] = useState<string | null>(null);
+  const payloadHash = useMemo(() => (lib?.cloud?.url ? fingerprint(backupPayload(lib)) : ''), [lib]);
+
+  const cloudBackup = useCallback(async () => {
+    const current = libRef.current;
+    const cloud = current?.cloud;
+    if (!current || !cloud?.url) throw new Error('Not connected to a Google Sheet');
+    const hash = fingerprint(backupPayload(current));
+    const info = await new CloudClient(cloud).save(current, cloud.device?.trim() || defaultDeviceName());
+    setAutoError(null);
+    setLib((l) => (l?.cloud ? { ...l, cloud: { ...l.cloud, lastBackupAt: info.created, lastHash: hash } } : l));
+    return info;
+  }, []);
+
+  const cloud = lib?.cloud;
+  useEffect(() => {
+    if (!cloud?.auto || !cloud.url || !payloadHash || payloadHash === cloud.lastHash) return;
+    const t = setTimeout(() => {
+      cloudBackup().catch((e) => setAutoError((e as Error).message));
+    }, AUTO_BACKUP_DELAY);
+    return () => clearTimeout(t);
+  }, [payloadHash, cloud?.auto, cloud?.url, cloud?.lastHash, cloudBackup]);
 
   const appearance = normalizeAppearance(lib?.appearance);
   const appearanceKey = JSON.stringify(appearance);
@@ -90,7 +122,18 @@ export default function App() {
     update((l) => L.recordAnswer(l, deckId, itemKey, grade));
 
   let screen;
-  if (view.name === 'appearance') {
+  if (view.name === 'backup') {
+    screen = (
+      <Backup
+        library={lib}
+        update={update}
+        onBackupNow={cloudBackup}
+        autoError={autoError}
+        onHelp={() => help('backup')}
+        onBack={home}
+      />
+    );
+  } else if (view.name === 'appearance') {
     screen = (
       <Appearance
         value={appearance}
@@ -156,6 +199,7 @@ export default function App() {
         onImport={importFile}
         onHelp={help}
         onAppearance={() => setView((v) => ({ name: 'appearance', from: v }))}
+        onBackup={() => setView({ name: 'backup' })}
         onNewCustomQuiz={() => setView({ name: 'custom-edit', quiz: newCustomQuiz(), isNew: true })}
         onEditCustomQuiz={(quizId) => {
           const quiz = lib.customQuizzes?.find((q) => q.id === quizId);

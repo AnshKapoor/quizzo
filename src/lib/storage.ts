@@ -11,6 +11,8 @@ declare global {
       readLibrary(): Promise<string | null>;
       writeLibrary(json: string): Promise<void>;
       libraryPath(): Promise<string>;
+      /** HTTP from the main process (desktop), so requests aren't subject to the page's CORS rules. */
+      http?(url: string, init: { method: 'GET' | 'POST'; body?: string }): Promise<{ status: number; text: string }>;
     };
   }
 }
@@ -42,17 +44,22 @@ export function starterLibrary(): Library {
   return addBuiltinDecks({ ...emptyLibrary(), seeded: [] });
 }
 
+/** Fills in missing parts of a stored or restored library and drops malformed custom quizzes. */
+export function normalizeLibrary(lib: Library): Library {
+  const customQuizzes = Array.isArray(lib.customQuizzes)
+    ? lib.customQuizzes.filter((q) => q && typeof q.id === 'string' && Array.isArray(q.picks))
+    : undefined;
+  const progress = lib.progress && typeof lib.progress === 'object' ? lib.progress : {};
+  const attempts = Array.isArray(lib.attempts) ? lib.attempts : undefined;
+  return { ...lib, format: 'quizzo-library', version: 1, progress, attempts, customQuizzes };
+}
+
 export async function loadLibrary(): Promise<Library> {
   try {
     const raw = window.quizzoNative ? await window.quizzoNative.readLibrary() : localStorage.getItem(KEY);
     if (raw) {
       const lib = JSON.parse(raw) as Library;
-      if (lib?.format === 'quizzo-library' && Array.isArray(lib.decks)) {
-        const customQuizzes = Array.isArray(lib.customQuizzes)
-          ? lib.customQuizzes.filter((q) => q && typeof q.id === 'string' && Array.isArray(q.picks))
-          : undefined;
-        return addBuiltinDecks({ ...lib, progress: lib.progress ?? {}, customQuizzes });
-      }
+      if (lib?.format === 'quizzo-library' && Array.isArray(lib.decks)) return addBuiltinDecks(normalizeLibrary(lib));
     }
   } catch (e) {
     console.error('Could not load library, starting fresh', e);

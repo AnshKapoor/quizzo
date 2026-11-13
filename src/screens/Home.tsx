@@ -12,6 +12,7 @@ interface Props {
   onImport: (file: File) => void;
   onHelp: (topic?: string) => void;
   onAppearance: () => void;
+  onBackup: () => void;
   onNewCustomQuiz: () => void;
   onEditCustomQuiz: (quizId: string) => void;
   onStartCustomQuiz: (quizId: string) => void;
@@ -37,12 +38,8 @@ export function Home(p: Props) {
           <button type="button" onClick={() => fileInput.current?.click()}>
             Import
           </button>
-          <button
-            type="button"
-            onClick={() => downloadJson(`quizzo-backup-${new Date().toISOString().slice(0, 10)}.json`, library)}
-            disabled={!library.decks.length}
-          >
-            Back up all
+          <button type="button" onClick={p.onBackup}>
+            ☁ Backup
           </button>
           <button type="button" className="ghost" onClick={p.onAppearance}>
             🎨 Appearance

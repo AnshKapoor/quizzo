@@ -1,7 +1,7 @@
 {
   "name": "quizzo",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "Interactive flashcards with quiz-style card types (MCQ, matching, cloze, word order). German first.",
   "type": "module",
   "main": "electron/main.cjs",
@@ -14,7 +14,9 @@
     "desktop": "npm run build && electron .",
     "desktop:dev": "electron . --dev",
     "android:sync": "npm run build && cap sync android",
-    "android:open": "cap open android"
+    "android:open": "cap open android",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win"
   },
   "dependencies": {
     "@capacitor/core": "^8.6.0",
@@ -28,8 +30,69 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "electron": "^45.3.1",
+    "electron-builder": "26.18.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.0"
+  },
+  "build": {
+    "appId": "app.quizzo",
+    "productName": "Quizzo",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "build/icon.png",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Quizzo-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Quizzo-Portable-${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.education",
+      "artifactName": "Quizzo-${version}-mac-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Education",
+      "artifactName": "Quizzo-${version}-linux-${arch}.${ext}"
+    },
+    "publish": null
   }
 }

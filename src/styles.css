@@ -660,3 +660,20 @@ kbd {
   .appearance-preview-wrap { position: static; }
   .layout-preview { min-height: 380px; }
 }
+
+/* ---- backup ---- */
+.backup { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.9rem; }
+.backup .bar { margin-bottom: 0; }
+.backup .sub { margin: 0; }
+.backup h2, .backup h3 { margin: 0.2rem 0 0; }
+.backup h3 { font-size: 1rem; margin-top: 0.6rem; }
+.backup-panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.restore-choice { border-color: var(--accent); }
+.notice.bad { background: var(--bad-bg); color: var(--bad); }
+.notice.good { background: var(--ok-bg); color: var(--ok); }
+.link-row input { flex: 1; min-width: 0; }
+.backup-list li { justify-content: space-between; padding: 0.5rem 0.75rem; }
+.backup-meta { display: flex; flex-direction: column; min-width: 0; }
+.setup-steps li { margin-bottom: 0.6rem; }
+.setup-steps .row { margin-top: 0.4rem; }
+.script-box { font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; margin-top: 0.4rem; white-space: pre; }

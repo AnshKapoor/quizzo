@@ -249,6 +249,23 @@ export interface Library {
   /** Quizzes with hand-picked questions from any deck. */
   customQuizzes?: CustomQuiz[];
   appearance?: Appearance;
+  /** This device's Google Sheet backup connection. Left out of backups; kept when restoring. */
+  cloud?: CloudSettings;
+}
+
+export interface CloudSettings {
+  /** Web app URL of the Apps Script in the user's Sheet (…/exec). Empty until connected. */
+  url: string;
+  /** Shared secret; the script in the Sheet only answers requests that carry it. */
+  key: string;
+  /** Back up by itself shortly after changes. */
+  auto?: boolean;
+  /** Name shown next to backups made from this device. */
+  device?: string;
+  /** Epoch ms of this device's last successful backup. */
+  lastBackupAt?: number;
+  /** Fingerprint of what was last backed up or restored, so unchanged libraries aren't uploaded again. */
+  lastHash?: string;
 }
 
 export interface AnswerResult {

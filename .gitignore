@@ -3,3 +3,4 @@ dist/
 android/app/build/
 android/.gradle/
 *.log
+release/
