@@ -3,6 +3,7 @@ import type { AnswerResult, Deck, Grade, Library, StudyItem } from '../types';
 import { buildQueue } from '../lib/library';
 import { VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
+import { Stage } from '../components/Stage';
 
 interface Props {
   deck: Deck;
@@ -74,7 +75,7 @@ export function Study({ deck, library, mode, onRecord, onExit }: Props) {
         <div style={{ width: `${queue.length ? (pos / queue.length) * 100 : 100}%` }} />
       </div>
 
-      <div className="stage">
+      <Stage resetKey={`${round}-${pos}`}>
         {queue.length === 0 ? (
           <div className="empty">
             <h2>Nothing due 🎉</h2>
@@ -118,7 +119,7 @@ export function Study({ deck, library, mode, onRecord, onExit }: Props) {
             )}
           </>
         )}
-      </div>
+      </Stage>
     </div>
   );
 }

@@ -206,6 +206,8 @@ kbd {
 
 /* ---------- home ---------- */
 .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 1.5rem; }
+.hero .row { flex-wrap: wrap; }
+.hero button { white-space: nowrap; }
 .deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
 .deck-tile {
   background: var(--surface);
@@ -559,8 +561,6 @@ kbd {
 /* ---------- question placement (Appearance → Question placement) ---------- */
 .stage { display: flex; flex-direction: column; }
 .stage > :is(.card, .next-row, .question-clock, .quiz-results) { width: 100%; }
-:root[data-layout='center'] .study { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
-:root[data-layout='center'] .study > .stage { flex: 1; justify-content: center; padding-bottom: 6vh; }
 :root:is([data-layout='center'], [data-layout='top-center']) :is(.study, .layout-preview) :is(.card, .next-row) {
   text-align: center;
 }

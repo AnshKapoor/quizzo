@@ -4,6 +4,7 @@ import { CARD_TYPE_LABELS, cardSummary } from '../lib/cardForm';
 import { buildQuizQueue, CUSTOM_QUIZ_OWNER, formatTime, percent, quizSummary, type QuizItem } from '../lib/quiz';
 import { VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
+import { Stage } from '../components/Stage';
 
 interface Props {
   quiz: QuizPreset;
@@ -164,7 +165,7 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, onRecord, o
         </div>
       )}
 
-      <div className="stage">
+      <Stage resetKey={`${phase}-${run}-${pos}`}>
         {phase === 'ready' && (
           <div className="empty quiz-intro">
             <h2>{quiz.title}</h2>
@@ -258,7 +259,7 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, onRecord, o
             </ol>
           </div>
         )}
-      </div>
+      </Stage>
     </div>
   );
 }
