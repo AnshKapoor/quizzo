@@ -59,8 +59,8 @@ describe('timed quizzes', () => {
     const verbs = preset({ tags: ['verbs'], questions: 0 });
     const pool = quizPool(deck, verbs);
     expect(pool.length).toBeGreaterThan(0);
-    expect(buildQuizQueue(deck, verbs).length).toBe(pool.length);
-    expect(buildQuizQueue(deck, preset({ questions: 4 })).length).toBe(4);
+    expect(buildQuizQueue(quizPool(deck, verbs), verbs).length).toBe(pool.length);
+    expect(buildQuizQueue(quizPool(deck, preset({ questions: 4 })), preset({ questions: 4 })).length).toBe(4);
     const tables = quizPool(deck, preset({ types: ['table'] }));
     expect(tables.map((i) => i.key).sort()).toEqual(['tab-artikel', 'tab-sein-haben']);
     // Vocabulary entries count by their source type.

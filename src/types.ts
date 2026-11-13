@@ -182,7 +182,27 @@ export interface QuizPreset {
   tags?: string[];
 }
 
-/** One finished timed quiz. */
+/**
+ * A quiz that is not tied to one deck: it uses hand-picked cards from any decks in the library.
+ * Picks point at cards by deck and card id; cards that were deleted since are skipped.
+ */
+export interface CustomQuiz extends QuizPreset {
+  picks: { deckId: string; cardId: string }[];
+}
+
+export type ThemeId = 'auto' | 'light' | 'dark' | 'sepia' | 'ocean' | 'forest' | 'midnight' | 'contrast';
+
+/** How the app looks. Stored with the library so a backup restores it. */
+export interface Appearance {
+  theme: ThemeId;
+  font: 'sans' | 'serif' | 'wide' | 'mono';
+  size: 's' | 'm' | 'l' | 'xl';
+  /** Where questions sit while studying: middle of the screen, top with centred text, or top left. */
+  layout: 'center' | 'top-center' | 'left';
+  cards: 'raised' | 'flat' | 'outlined';
+}
+
+/** One finished timed quiz. `deckId` is CUSTOM_QUIZ_OWNER for custom quizzes. */
 export interface QuizAttempt {
   deckId: string;
   quizId: string;
@@ -226,6 +246,9 @@ export interface Library {
   seeded?: string[];
   /** Results of timed quizzes, newest last. */
   attempts?: QuizAttempt[];
+  /** Quizzes with hand-picked questions from any deck. */
+  customQuizzes?: CustomQuiz[];
+  appearance?: Appearance;
 }
 
 export interface AnswerResult {

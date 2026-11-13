@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { CardType, Library } from './types';
+import type { CardType, CustomQuiz, Library } from './types';
 import * as L from './lib/library';
 import { loadLibrary, readFileText, saveLibrary } from './lib/storage';
 import { uid } from './lib/util';
@@ -9,7 +9,19 @@ import { DeckView } from './screens/DeckView';
 import { CardEditor } from './screens/CardEditor';
 import { Study } from './screens/Study';
 import { TimedQuiz } from './screens/TimedQuiz';
-import { addAttempt } from './lib/quiz';
+import {
+  addAttempt,
+  CUSTOM_QUIZ_OWNER,
+  customQuizItems,
+  deckQuizItems,
+  newCustomQuiz,
+  quizAttempts,
+  removeCustomQuiz,
+  upsertCustomQuiz,
+} from './lib/quiz';
+import { applyAppearance, normalizeAppearance } from './lib/appearance';
+import { Appearance } from './screens/Appearance';
+import { QuizBuilder } from './screens/QuizBuilder';
 import { exampleDeck } from './lib/help';
 import { Help } from './screens/Help';
 
@@ -19,6 +31,9 @@ type View =
   | { name: 'study'; deckId: string; mode: 'review' | 'quiz' }
   | { name: 'test'; deckId: string; quizId: string }
   | { name: 'help'; topic?: string; from: Exclude<View, { name: 'help' }> }
+  | { name: 'appearance'; from: View }
+  | { name: 'custom-edit'; quiz: CustomQuiz; isNew: boolean }
+  | { name: 'custom-test'; quizId: string }
   | { name: 'edit'; deckId: string; cardId?: string; type: CardType };
 
 export default function App() {
@@ -40,6 +55,13 @@ export default function App() {
     }, 300);
     return () => clearTimeout(t);
   }, [lib]);
+
+  const appearance = normalizeAppearance(lib?.appearance);
+  const appearanceKey = JSON.stringify(appearance);
+  useEffect(() => {
+    if (lib) applyAppearance(appearance);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appearanceKey, !!lib]);
 
   if (!lib) return <div className="loading">Loading…</div>;
 
@@ -64,8 +86,56 @@ export default function App() {
     alert(`Imported ${decks.length} deck(s), ${cards} card(s).${skipped}`);
   };
 
+  const recordAnswer = (deckId: string, itemKey: string, grade: Parameters<typeof L.recordAnswer>[3]) =>
+    update((l) => L.recordAnswer(l, deckId, itemKey, grade));
+
   let screen;
-  if (view.name === 'help') {
+  if (view.name === 'appearance') {
+    screen = (
+      <Appearance
+        value={appearance}
+        onChange={(change) => update((l) => ({ ...l, appearance: { ...normalizeAppearance(l.appearance), ...change } }))}
+        onBack={() => setView(view.from)}
+      />
+    );
+  } else if (view.name === 'custom-edit') {
+    screen = (
+      <QuizBuilder
+        key={view.quiz.id}
+        library={lib}
+        quiz={view.quiz}
+        isNew={view.isNew}
+        onHelp={() => help('custom')}
+        onCancel={home}
+        onSave={(quiz, start) => {
+          update((l) => upsertCustomQuiz(l, quiz));
+          setView(start ? { name: 'custom-test', quizId: quiz.id } : { name: 'home' });
+        }}
+      />
+    );
+  } else if (view.name === 'custom-test') {
+    const quiz = lib.customQuizzes?.find((q) => q.id === view.quizId);
+    screen = quiz ? (
+      <TimedQuiz
+        key={quiz.id}
+        quiz={quiz}
+        pool={customQuizItems(lib, quiz)}
+        history={quizAttempts(lib, CUSTOM_QUIZ_OWNER, quiz.id)}
+        backLabel="Home"
+        ownerId={CUSTOM_QUIZ_OWNER}
+        onRecord={recordAnswer}
+        onFinish={(attempt) => update((l) => addAttempt(l, attempt))}
+        onExit={home}
+      />
+    ) : (
+      <div className="empty">
+        <p>This quiz no longer exists.</p>
+        <button type="button" onClick={home}>
+          Home
+        </button>
+      </div>
+    );
+  } else if (view.name === 'help') {
     screen = (
       <Help
         topic={view.topic}
@@ -84,7 +154,15 @@ export default function App() {
         onOpen={(deckId) => setView({ name: 'deck', deckId })}
         onStudy={(deckId, mode) => setView({ name: 'study', deckId, mode })}
         onImport={importFile}
-        onHelp={() => help()}
+        onHelp={help}
+        onAppearance={() => setView((v) => ({ name: 'appearance', from: v }))}
+        onNewCustomQuiz={() => setView({ name: 'custom-edit', quiz: newCustomQuiz(), isNew: true })}
+        onEditCustomQuiz={(quizId) => {
+          const quiz = lib.customQuizzes?.find((q) => q.id === quizId);
+          if (quiz) setView({ name: 'custom-edit', quiz, isNew: false });
+        }}
+        onStartCustomQuiz={(quizId) => setView({ name: 'custom-test', quizId })}
+        onDeleteCustomQuiz={(quizId) => update((l) => removeCustomQuiz(l, quizId))}
         onNewDeck={() => {
           const id = uid('deck-');
           update((l) => L.upsertDeck(l, { id, title: 'New deck', language: { target: 'de', native: 'en' }, cards: [] }));
@@ -132,10 +210,12 @@ export default function App() {
     screen = quiz ? (
       <TimedQuiz
         key={`${deck.id}-${quiz.id}`}
-        deck={deck}
-        library={lib}
         quiz={quiz}
-        onRecord={(cardId, grade) => update((l) => L.recordAnswer(l, deck.id, cardId, grade))}
+        pool={deckQuizItems(deck, quiz)}
+        history={quizAttempts(lib, deck.id, quiz.id)}
+        backLabel={deck.title}
+        ownerId={deck.id}
+        onRecord={recordAnswer}
         onFinish={(attempt) => update((l) => addAttempt(l, attempt))}
         onExit={back}
       />

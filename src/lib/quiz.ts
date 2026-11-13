@@ -1,14 +1,27 @@
 // Timed quizzes: picking the questions, keeping results, and formatting times.
-import type { Deck, Library, QuizAttempt, QuizPreset, StudyItem } from '../types';
+import type { Card, CustomQuiz, Deck, Library, QuizAttempt, QuizPreset, StudyItem } from '../types';
 import { spreadOut } from './library';
 import { shuffle, uid } from './util';
-import { expandDeck } from './vocab';
+import { expandCard, expandDeck } from './vocab';
+
+/** `deckId` used for the results of custom (multi-deck) quizzes. */
+export const CUSTOM_QUIZ_OWNER = '@custom';
+
+/** A question in a quiz, with the deck it came from (for progress and read-aloud language). */
+export interface QuizItem extends StudyItem {
+  deckId: string;
+  lang: string;
+}
 
 export function newQuizPreset(): QuizPreset {
   return { id: uid('q-'), title: 'Test', questions: 10, timeLimit: 10 * 60, perQuestion: 0 };
 }
 
-/** All questions a quiz can draw from, after its type and tag filters. */
+export function newCustomQuiz(): CustomQuiz {
+  return { id: uid('cq-'), title: 'My quiz', questions: 0, timeLimit: 10 * 60, perQuestion: 0, picks: [] };
+}
+
+/** All questions a deck quiz can draw from, after its type and tag filters. */
 export function quizPool(deck: Deck, quiz: QuizPreset): StudyItem[] {
   const byId = new Map(deck.cards.map((c) => [c.id, c]));
   return expandDeck(deck).filter((it) => {
@@ -20,10 +33,69 @@ export function quizPool(deck: Deck, quiz: QuizPreset): StudyItem[] {
   });
 }
 
+export function deckQuizItems(deck: Deck, quiz: QuizPreset): QuizItem[] {
+  return quizPool(deck, quiz).map((it) => ({ ...it, deckId: deck.id, lang: deck.language.target }));
+}
+
+/** The picked cards that still exist, in the order they were picked. */
+export function resolvePicks(lib: Library, quiz: CustomQuiz): { deck: Deck; card: Card }[] {
+  const decks = new Map(lib.decks.map((d) => [d.id, d]));
+  return quiz.picks.flatMap(({ deckId, cardId }) => {
+    const deck = decks.get(deckId);
+    const card = deck?.cards.find((c) => c.id === cardId);
+    return deck && card ? [{ deck, card }] : [];
+  });
+}
+
+/** Every question of the picked cards (a vocabulary entry gives several). */
+export function customQuizItems(lib: Library, quiz: CustomQuiz): QuizItem[] {
+  return resolvePicks(lib, quiz).flatMap(({ deck, card }) =>
+    expandCard(card, deck).map((it) => ({ ...it, deckId: deck.id, lang: deck.language.target })),
+  );
+}
+
 /** A random selection of questions for one run of the quiz. */
-export function buildQuizQueue(deck: Deck, quiz: QuizPreset): StudyItem[] {
-  const pool = shuffle(quizPool(deck, quiz));
-  return spreadOut(quiz.questions > 0 ? pool.slice(0, quiz.questions) : pool);
+export function buildQuizQueue<T extends StudyItem>(pool: T[], quiz: QuizPreset): T[] {
+  const picked = shuffle(pool);
+  return spreadOut(quiz.questions > 0 ? picked.slice(0, quiz.questions) : picked) as T[];
+}
+
+/**
+ * Turns a custom quiz into a normal deck (copies of the picked cards plus the quiz settings),
+ * so it can be exported and shared like any other deck.
+ */
+export function customQuizToDeck(lib: Library, quiz: CustomQuiz, id = uid('deck-')): Deck {
+  const picked = resolvePicks(lib, quiz);
+  const used = new Set<string>();
+  const cards = picked.map(({ card }) => {
+    let cid = card.id;
+    for (let n = 2; used.has(cid); n++) cid = `${card.id}-${n}`;
+    used.add(cid);
+    return { ...card, id: cid };
+  });
+  const { picks: _picks, ...preset } = quiz;
+  return {
+    id,
+    title: quiz.title,
+    description: `Questions from ${new Set(picked.map((p) => p.deck.title)).size} deck(s).`,
+    language: picked[0]?.deck.language ?? { target: 'de', native: 'en' },
+    cards,
+    quizzes: [{ ...preset, id: 'q-' + quiz.id }],
+  };
+}
+
+export function upsertCustomQuiz(lib: Library, quiz: CustomQuiz): Library {
+  const list = lib.customQuizzes ?? [];
+  const exists = list.some((q) => q.id === quiz.id);
+  return { ...lib, customQuizzes: exists ? list.map((q) => (q.id === quiz.id ? quiz : q)) : [...list, quiz] };
+}
+
+export function removeCustomQuiz(lib: Library, quizId: string): Library {
+  return {
+    ...lib,
+    customQuizzes: (lib.customQuizzes ?? []).filter((q) => q.id !== quizId),
+    attempts: lib.attempts?.filter((a) => !(a.deckId === CUSTOM_QUIZ_OWNER && a.quizId === quizId)),
+  };
 }
 
 const MAX_ATTEMPTS_PER_QUIZ = 20;

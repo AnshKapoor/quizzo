@@ -22,6 +22,8 @@ const SECTIONS = [
   ['types', 'Card types'],
   ['study', 'Studying'],
   ['timed', 'Timed quizzes'],
+  ['custom', 'Custom quizzes'],
+  ['appearance', 'Themes & layout'],
   ['files', 'Sharing decks (JSON files)'],
   ['keys', 'Keyboard shortcuts'],
 ] as const;
@@ -252,6 +254,50 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
           score, your time and a review of every question. Your recent results are saved. Timed quizzes are saved in
           the deck, so they are included when you export and share it.
         </p>
+      </section>
+
+      <section id="help-custom" className="help-section">
+        <h2>Custom quizzes (from any deck)</h2>
+        <p>A custom quiz is not part of one deck: you pick the questions yourself from all your decks.</p>
+        <ol>
+          <li>
+            On the start screen, under <b>Custom quizzes</b>, press <b>+ New custom quiz</b>.
+          </li>
+          <li>Give it a name and, if you like, a number of questions and a time limit (leave empty for no limit).</li>
+          <li>
+            In the <b>Question bank</b>, tick the questions you want. Search, or filter by deck, card type or tag, then
+            use <b>Select all shown</b> to add many at once. The tick box next to a deck name selects all its shown
+            cards. 👁 shows a preview.
+          </li>
+          <li>
+            Press <b>Save &amp; start</b>, or <b>Save</b> to take it later. If you set a number of questions, each run
+            picks that many at random from your selection.
+          </li>
+        </ol>
+        <p className="sub">
+          Answers still count towards each card's learning progress in its own deck. ⤓ exports the quiz as a normal
+          deck file (with copies of the questions) so you can share it.
+        </p>
+      </section>
+
+      <section id="help-appearance" className="help-section">
+        <h2>Themes &amp; layout</h2>
+        <p>
+          Press <b>🎨 Appearance</b> on the start screen. Changes apply straight away and the preview shows a real
+          question you can try.
+        </p>
+        <ul>
+          <li>
+            <b>Theme</b>: Match device, Light, Dark, Sepia, Ocean, Forest, Midnight or High contrast.
+          </li>
+          <li>
+            <b>Question placement</b>: <i>Centred</i> puts the question in the middle of the screen with centred text;
+            <i> Top, centred</i> keeps it at the top; <i>Top, left</i> is the classic layout.
+          </li>
+          <li>
+            <b>Card style</b>, <b>Font</b> and <b>Text size</b> change how cards look and how big everything is.
+          </li>
+        </ul>
       </section>
 
       <section id="help-files" className="help-section">

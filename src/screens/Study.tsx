@@ -74,49 +74,51 @@ export function Study({ deck, library, mode, onRecord, onExit }: Props) {
         <div style={{ width: `${queue.length ? (pos / queue.length) * 100 : 100}%` }} />
       </div>
 
-      {queue.length === 0 ? (
-        <div className="empty">
-          <h2>Nothing due 🎉</h2>
-          <p>You've reviewed everything for now. Try a quiz, or add more cards.</p>
-          <button type="button" className="primary" onClick={onExit}>
-            Back
-          </button>
-        </div>
-      ) : finished ? (
-        <div className="empty">
-          <h2>{mode === 'quiz' ? 'Quiz finished' : 'Session done'}</h2>
-          <p className="score">
-            {score.correct} / {score.answered} correct
-            {score.answered > 0 && <> · {Math.round((score.correct / score.answered) * 100)}%</>}
-          </p>
-          <div className="row">
-            <button type="button" className="primary" onClick={restart}>
-              {mode === 'quiz' ? 'New quiz' : 'Continue'}
-            </button>
-            <button type="button" onClick={onExit}>
-              Back to deck
+      <div className="stage">
+        {queue.length === 0 ? (
+          <div className="empty">
+            <h2>Nothing due 🎉</h2>
+            <p>You've reviewed everything for now. Try a quiz, or add more cards.</p>
+            <button type="button" className="primary" onClick={onExit}>
+              Back
             </button>
           </div>
-        </div>
-      ) : (
-        <>
-          <CardView
-            key={`${round}-${pos}-${item.key}`}
-            card={item.card}
-            label={item.variant ? VARIANT_LABELS[item.variant] : undefined}
-            lang={deck.language.target}
-            onAnswer={answer}
-            autoPlay
-          />
-          {result && (
-            <div className="next-row">
-              <button type="button" className="primary" autoFocus onClick={next}>
-                Next <kbd>Enter</kbd>
+        ) : finished ? (
+          <div className="empty">
+            <h2>{mode === 'quiz' ? 'Quiz finished' : 'Session done'}</h2>
+            <p className="score">
+              {score.correct} / {score.answered} correct
+              {score.answered > 0 && <> · {Math.round((score.correct / score.answered) * 100)}%</>}
+            </p>
+            <div className="row">
+              <button type="button" className="primary" onClick={restart}>
+                {mode === 'quiz' ? 'New quiz' : 'Continue'}
+              </button>
+              <button type="button" onClick={onExit}>
+                Back to deck
               </button>
             </div>
-          )}
-        </>
-      )}
+          </div>
+        ) : (
+          <>
+            <CardView
+              key={`${round}-${pos}-${item.key}`}
+              card={item.card}
+              label={item.variant ? VARIANT_LABELS[item.variant] : undefined}
+              lang={deck.language.target}
+              onAnswer={answer}
+              autoPlay
+            />
+            {result && (
+              <div className="next-row">
+                <button type="button" className="primary" autoFocus onClick={next}>
+                  Next <kbd>Enter</kbd>
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

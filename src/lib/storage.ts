@@ -47,8 +47,12 @@ export async function loadLibrary(): Promise<Library> {
     const raw = window.quizzoNative ? await window.quizzoNative.readLibrary() : localStorage.getItem(KEY);
     if (raw) {
       const lib = JSON.parse(raw) as Library;
-      if (lib?.format === 'quizzo-library' && Array.isArray(lib.decks))
-        return addBuiltinDecks({ ...lib, progress: lib.progress ?? {} });
+      if (lib?.format === 'quizzo-library' && Array.isArray(lib.decks)) {
+        const customQuizzes = Array.isArray(lib.customQuizzes)
+          ? lib.customQuizzes.filter((q) => q && typeof q.id === 'string' && Array.isArray(q.picks))
+          : undefined;
+        return addBuiltinDecks({ ...lib, progress: lib.progress ?? {}, customQuizzes });
+      }
     }
   } catch (e) {
     console.error('Could not load library, starting fresh', e);

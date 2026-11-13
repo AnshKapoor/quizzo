@@ -1,15 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AnswerResult, Deck, Grade, Library, QuizAttempt, QuizPreset, StudyItem } from '../types';
+import type { AnswerResult, Grade, QuizAttempt, QuizPreset } from '../types';
 import { CARD_TYPE_LABELS, cardSummary } from '../lib/cardForm';
-import { buildQuizQueue, formatTime, percent, quizAttempts, quizPool, quizSummary } from '../lib/quiz';
+import { buildQuizQueue, CUSTOM_QUIZ_OWNER, formatTime, percent, quizSummary, type QuizItem } from '../lib/quiz';
 import { VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
 
 interface Props {
-  deck: Deck;
-  library: Library;
   quiz: QuizPreset;
-  onRecord: (itemKey: string, grade: Grade) => void;
+  /** Every question the quiz can draw from (one deck, or picked from several). */
+  pool: QuizItem[];
+  /** Earlier results of this quiz. */
+  history: QuizAttempt[];
+  /** Label of the back button, e.g. the deck title. */
+  backLabel: string;
+  /** `deckId` stored with the result (the deck, or CUSTOM_QUIZ_OWNER). */
+  ownerId: string;
+  onRecord: (deckId: string, itemKey: string, grade: Grade) => void;
   onFinish: (attempt: QuizAttempt) => void;
   onExit: () => void;
 }
@@ -25,9 +31,9 @@ const OUTCOME_TEXT: Record<Outcome, string> = {
   unanswered: 'Not answered',
 };
 
-export function TimedQuiz({ deck, library, quiz, onRecord, onFinish, onExit }: Props) {
+export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, onRecord, onFinish, onExit }: Props) {
   const [phase, setPhase] = useState<'ready' | 'running' | 'done'>('ready');
-  const [queue, setQueue] = useState<StudyItem[]>([]);
+  const [queue, setQueue] = useState<QuizItem[]>([]);
   const [pos, setPos] = useState(0);
   const [result, setResult] = useState<AnswerResult | null>(null);
   const [outcomes, setOutcomes] = useState<Outcome[]>([]);
@@ -39,8 +45,7 @@ export function TimedQuiz({ deck, library, quiz, onRecord, onFinish, onExit }: P
   const [run, setRun] = useState(0);
   const reported = useRef(false);
 
-  const available = quizPool(deck, quiz).length;
-  const history = quizAttempts(library, deck.id, quiz.id);
+  const available = pool.length;
   const best = history.reduce<QuizAttempt | null>(
     (b, a) => (!b || percent(a.correct, a.total) > percent(b.correct, b.total) ? a : b),
     null,
@@ -50,7 +55,7 @@ export function TimedQuiz({ deck, library, quiz, onRecord, onFinish, onExit }: P
   const questionLeft = quiz.perQuestion && !result ? (questionAt + quiz.perQuestion * 1000 - now) / 1000 : null;
 
   const start = () => {
-    const q = buildQuizQueue(deck, quiz);
+    const q = buildQuizQueue(pool, quiz);
     const t = Date.now();
     setQueue(q);
     setOutcomes(q.map(() => 'unanswered'));
@@ -74,7 +79,7 @@ export function TimedQuiz({ deck, library, quiz, onRecord, onFinish, onExit }: P
     setTimeUp(byClock);
     setPhase('done');
     onFinish({
-      deckId: deck.id,
+      deckId: ownerId,
       quizId: quiz.id,
       at: Date.now(),
       correct: final.filter((o) => o === 'right').length,
@@ -93,7 +98,7 @@ export function TimedQuiz({ deck, library, quiz, onRecord, onFinish, onExit }: P
   const answer = (r: AnswerResult) => {
     if (phase !== 'running' || result) return;
     setResult(r);
-    onRecord(queue[pos].key, r.grade);
+    onRecord(queue[pos].deckId, queue[pos].key, r.grade);
     setOutcomes((o) => o.map((x, i) => (i === pos ? (r.correct ? 'right' : 'wrong') : x)));
   };
 
@@ -137,7 +142,7 @@ export function TimedQuiz({ deck, library, quiz, onRecord, onFinish, onExit }: P
     <div className="screen study timed">
       <header className="bar">
         <button type="button" className="ghost" onClick={leave}>
-          ← {deck.title}
+          ← {backLabel}
         </button>
         <span className="mode-pill">⏱ {quiz.title}</span>
         {phase === 'running' && (
@@ -159,97 +164,101 @@ export function TimedQuiz({ deck, library, quiz, onRecord, onFinish, onExit }: P
         </div>
       )}
 
-      {phase === 'ready' && (
-        <div className="empty quiz-intro">
-          <h2>{quiz.title}</h2>
-          <p className="score">{quizSummary(quiz, available)}</p>
-          {available === 0 ? (
-            <p>No cards in this deck match this quiz's card types and tags.</p>
-          ) : (
-            <ul className="rules">
-              {quiz.timeLimit > 0 && <li>The quiz ends when the clock reaches 0:00.</li>}
-              {quiz.perQuestion > 0 && <li>Each question has {quiz.perQuestion} seconds; after that it counts as missed.</li>}
-              <li>Questions you don't answer count as wrong.</li>
-            </ul>
-          )}
-          {best && (
-            <p className="sub">
-              Best: {best.correct} / {best.total} ({percent(best.correct, best.total)}%) · {history.length} attempt
-              {history.length === 1 ? '' : 's'}
-            </p>
-          )}
-          <div className="row">
-            <button type="button" className="primary" autoFocus disabled={available === 0} onClick={start}>
-              Start
-            </button>
-            <button type="button" onClick={onExit}>
-              Back
-            </button>
-          </div>
-        </div>
-      )}
-
-      {phase === 'running' && item && (
-        <>
-          {questionLeft !== null && (
-            <div className={`question-clock ${low(questionLeft, quiz.perQuestion) ? 'low' : ''}`}>
-              <div style={{ width: `${Math.max(0, questionLeft / quiz.perQuestion) * 100}%` }} />
-              <span>{Math.max(0, Math.ceil(questionLeft))} s</span>
-            </div>
-          )}
-          <CardView
-            key={`${run}-${pos}`}
-            card={item.card}
-            label={item.variant ? VARIANT_LABELS[item.variant] : undefined}
-            lang={deck.language.target}
-            onAnswer={answer}
-            autoPlay
-          />
-          <div className="next-row">
-            {!result && (
-              <button type="button" className="ghost" onClick={() => goTo(pos + 1, outcomes)}>
-                Skip
-              </button>
+      <div className="stage">
+        {phase === 'ready' && (
+          <div className="empty quiz-intro">
+            <h2>{quiz.title}</h2>
+            <p className="score">{quizSummary(quiz, available)}</p>
+            {available === 0 ? (
+              <p>{ownerId === CUSTOM_QUIZ_OWNER
+                  ? 'None of the picked questions exist any more. Edit the quiz to pick new ones.'
+                  : "No cards in this deck match this quiz's card types and tags."}</p>
+            ) : (
+              <ul className="rules">
+                {quiz.timeLimit > 0 && <li>The quiz ends when the clock reaches 0:00.</li>}
+                {quiz.perQuestion > 0 && <li>Each question has {quiz.perQuestion} seconds; after that it counts as missed.</li>}
+                <li>Questions you don't answer count as wrong.</li>
+              </ul>
             )}
-            {result && (
-              <button type="button" className="primary" autoFocus onClick={() => goTo(pos + 1, outcomes)}>
-                {pos + 1 >= queue.length ? 'Finish' : 'Next'} <kbd>Enter</kbd>
-              </button>
+            {best && (
+              <p className="sub">
+                Best: {best.correct} / {best.total} ({percent(best.correct, best.total)}%) · {history.length} attempt
+                {history.length === 1 ? '' : 's'}
+              </p>
             )}
-          </div>
-        </>
-      )}
-
-      {phase === 'done' && (
-        <div className="quiz-results">
-          <div className="empty">
-            <h2>{timeUp ? "Time's up!" : 'Quiz finished'}</h2>
-            <p className="score">
-              {correct} / {queue.length} correct · {percent(correct, queue.length)}%
-            </p>
-            <p className="sub">Time: {formatTime((endedAt - startedAt) / 1000)}</p>
             <div className="row">
-              <button type="button" className="primary" onClick={start}>
-                Try again
+              <button type="button" className="primary" autoFocus disabled={available === 0} onClick={start}>
+                Start
               </button>
               <button type="button" onClick={onExit}>
-                Back to deck
+                Back
               </button>
             </div>
           </div>
-          <ol className="result-list">
-            {queue.map((it, i) => (
-              <li key={it.key + i} className={`outcome-${outcomes[i]}`}>
-                <span className="outcome" title={OUTCOME_TEXT[outcomes[i]]} aria-label={OUTCOME_TEXT[outcomes[i]]}>
-                  {OUTCOME_ICON[outcomes[i]]}
-                </span>
-                <span className="badge">{it.variant ? VARIANT_LABELS[it.variant] : CARD_TYPE_LABELS[it.card.type]}</span>
-                <span className="summary">{cardSummary(it.card)}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
+        )}
+
+        {phase === 'running' && item && (
+          <>
+            {questionLeft !== null && (
+              <div className={`question-clock ${low(questionLeft, quiz.perQuestion) ? 'low' : ''}`}>
+                <div style={{ width: `${Math.max(0, questionLeft / quiz.perQuestion) * 100}%` }} />
+                <span>{Math.max(0, Math.ceil(questionLeft))} s</span>
+              </div>
+            )}
+            <CardView
+              key={`${run}-${pos}`}
+              card={item.card}
+              label={item.variant ? VARIANT_LABELS[item.variant] : undefined}
+              lang={item.lang}
+              onAnswer={answer}
+              autoPlay
+            />
+            <div className="next-row">
+              {!result && (
+                <button type="button" className="ghost" onClick={() => goTo(pos + 1, outcomes)}>
+                  Skip
+                </button>
+              )}
+              {result && (
+                <button type="button" className="primary" autoFocus onClick={() => goTo(pos + 1, outcomes)}>
+                  {pos + 1 >= queue.length ? 'Finish' : 'Next'} <kbd>Enter</kbd>
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
+        {phase === 'done' && (
+          <div className="quiz-results">
+            <div className="empty">
+              <h2>{timeUp ? "Time's up!" : 'Quiz finished'}</h2>
+              <p className="score">
+                {correct} / {queue.length} correct · {percent(correct, queue.length)}%
+              </p>
+              <p className="sub">Time: {formatTime((endedAt - startedAt) / 1000)}</p>
+              <div className="row">
+                <button type="button" className="primary" onClick={start}>
+                  Try again
+                </button>
+                <button type="button" onClick={onExit}>
+                  {ownerId === CUSTOM_QUIZ_OWNER ? 'Done' : 'Back to deck'}
+                </button>
+              </div>
+            </div>
+            <ol className="result-list">
+              {queue.map((it, i) => (
+                <li key={it.key + i} className={`outcome-${outcomes[i]}`}>
+                  <span className="outcome" title={OUTCOME_TEXT[outcomes[i]]} aria-label={OUTCOME_TEXT[outcomes[i]]}>
+                    {OUTCOME_ICON[outcomes[i]]}
+                  </span>
+                  <span className="badge">{it.variant ? VARIANT_LABELS[it.variant] : CARD_TYPE_LABELS[it.card.type]}</span>
+                  <span className="summary">{cardSummary(it.card)}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

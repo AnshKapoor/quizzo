@@ -27,9 +27,15 @@ Three ways to study a deck:
 - **Timed quizzes**: tests saved with the deck: number of questions, a time limit for the whole quiz and/or per
   question, and optional card-type and tag filters. Shows a countdown, a per-question review at the end, and
   keeps your last results. Saved quizzes are part of the deck file, so they are shared along with it.
+- **Custom quizzes**: not tied to a deck. Pick any questions from the whole library (search, filter by deck,
+  type and tag, select all shown, preview), add an optional question count and timers, and run it like a timed
+  quiz. Answers still update each card's progress in its own deck. ⤓ exports one as a normal deck file to share.
+- **Appearance** (🎨 on the start screen): 8 themes (Match device, Light, Dark, Sepia, Ocean, Forest, Midnight,
+  High contrast), question placement (Centred in the middle of the screen, Top centred, Top left), card style
+  (Raised, Flat, Outlined), font and text size. Stored in the library, so a backup restores it.
 
 Other features: built-in help (how to create decks and write every card type, with playable examples and an example deck), card editor with a live preview and step-by-step instructions, text-to-speech (🔊, desktop/browser), keyboard shortcuts
-(Space reveals, 1–4 grade, Enter next, Esc exits), light/dark theme, phone-sized layout.
+(Space reveals, 1–4 grade, Enter next, Esc exits), phone-sized layout.
 
 ## Stack
 
@@ -98,7 +104,7 @@ src/
   data/                    built-in decks (German A1 starter + practice); new ones reach existing installs once
   lib/                     answer checking, cloze parser, scheduler, validation, storage
   components/cards/        one component per card type
-  screens/                 Home, DeckView, CardEditor, Study
+  screens/                 Home, DeckView, CardEditor, Study, TimedQuiz, QuizBuilder, Appearance, Help
 electron/                  desktop main + preload (JSON file storage)
 android/                   generated Capacitor project
 docs/deck-format.md        JSON deck format reference
