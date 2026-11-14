@@ -12,6 +12,7 @@ import { OrderView } from './OrderView';
 import { SequenceView } from './SequenceView';
 import { SpotView } from './SpotView';
 import { TableView } from './TableView';
+import { useImageSrc } from '../ImageContext';
 
 export interface CardViewProps<C extends StudyCard = StudyCard> {
   card: C;
@@ -25,8 +26,9 @@ export interface CardViewProps<C extends StudyCard = StudyCard> {
 }
 
 /** Hint text and / or picture behind a button, so looking at it is the learner's choice. */
-function HintToggle({ text, image }: { text?: string; image?: string }) {
+function HintToggle({ text, image: ref }: { text?: string; image?: string }) {
   const [open, setOpen] = useState(false);
+  const image = useImageSrc(ref);
   if (!text && !image) return null;
   return open ? (
     <div className="hint hint-open">
@@ -43,10 +45,11 @@ function HintToggle({ text, image }: { text?: string; image?: string }) {
 /** Renders any card type. Give it a `key` per card so its internal state resets. */
 export function CardView(props: CardViewProps) {
   const { card } = props;
+  const image = useImageSrc(card.image);
   return (
     <div className={`card card-${card.type}`}>
       <div className="card-type">{props.label ?? CARD_TYPE_LABELS[card.type]}</div>
-      {card.image && <img className="card-image" src={card.image} alt="" />}
+      {image && <img className="card-image" src={image} alt="" />}
       {card.type === 'flashcard' && <FlashcardView {...props} card={card} />}
       {card.type === 'mcq' && <McqView {...props} card={card} />}
       {card.type === 'match' && <MatchView {...props} card={card} />}

@@ -5,6 +5,7 @@ import { cardDue, deckStats } from '../lib/library';
 import { newQuizPreset, percent, quizAttempts, quizPool, quizSummary } from '../lib/quiz';
 import { QuizPresetForm } from '../components/QuizPresetForm';
 import { deckToFile, downloadJson, slug } from '../lib/storage';
+import { inlineDeckImages } from '../lib/image';
 
 const LANGUAGES: Record<string, string> = { de: 'German', fr: 'French', es: 'Spanish', it: 'Italian', en: 'English' };
 const TYPES = Object.keys(CARD_TYPE_LABELS) as CardType[];
@@ -99,7 +100,7 @@ export function DeckView(p: Props) {
             {stats.total} cards · {stats.questions} questions · {stats.due} due · {stats.fresh} new
           </span>
           <span className="spacer" />
-          <button type="button" onClick={() => downloadJson(`${slug(deck.title)}.quizzo.json`, deckToFile(deck))}>
+          <button type="button" onClick={() => downloadJson(`${slug(deck.title)}.quizzo.json`, deckToFile(inlineDeckImages(deck, p.library.images)))}>
             Export JSON
           </button>
           <button

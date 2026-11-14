@@ -15,6 +15,7 @@ import {
   WebPageError,
 } from './cloud';
 import { emptyLibrary } from './storage';
+import { inlineDeckImages, normalizeImages } from './image';
 import { DEFAULT_APPEARANCE } from './appearance';
 
 // ---- a tiny fake of the Google Sheets / Apps Script services the script uses ----
@@ -232,5 +233,95 @@ describe('connect problems', () => {
 
   it('keeps the setup key of a connected device', () => {
     expect(setupKey('abc')).toBe('abc');
+  });
+});
+
+describe('pictures in backups', () => {
+  const conn = { url: 'https://script.google.com/macros/s/ABC/exec', key: 'k1' };
+  const pic = (n: number) => 'data:image/webp;base64,' + 'A'.repeat(60000 + n); // larger than one cell
+  const withPics = (): Library =>
+    normalizeImages({
+      ...emptyLibrary(),
+      decks: [
+        {
+          id: 'd',
+          title: 'D',
+          language: { target: 'de', native: 'en' },
+          cards: [
+            { id: 'c1', type: 'flashcard', front: 'a', back: 'b', image: pic(1), hintImage: pic(2) },
+            { id: 'c2', type: 'flashcard', front: 'c', back: 'd', image: pic(1) }, // same picture again
+          ],
+        },
+      ],
+    });
+  const counting = (http: ReturnType<typeof fakeScript>['http']) => {
+    const calls: string[] = [];
+    const wrapped: typeof http = async (url, init) => {
+      calls.push(new URL(url).searchParams.get('action')!);
+      return http(url, init);
+    };
+    return { calls, http: wrapped };
+  };
+
+  it('stores each picture once in the library, with references on the cards', () => {
+    const l = withPics();
+    expect(Object.keys(l.images!)).toHaveLength(2);
+    expect(l.decks[0].cards[0].image).toMatch(/^img:/);
+    expect(l.decks[0].cards[1].image).toBe(l.decks[0].cards[0].image);
+    expect(normalizeImages(l)).toBe(l); // nothing to do
+    // Exported deck files carry the pictures inline again.
+    expect(inlineDeckImages(l.decks[0], l.images).cards[0].image).toBe(pic(1));
+    // Removing the only card using a picture drops the picture.
+    const fewer = normalizeImages({ ...l, decks: [{ ...l.decks[0], cards: [l.decks[0].cards[1]] }] });
+    expect(Object.keys(fewer.images!)).toHaveLength(1);
+  });
+
+  it('uploads pictures once (script v2) and restores them, skipping ones the device has', async () => {
+    const { sheets, http } = fakeScript('k1');
+    const c = counting(http);
+    const client = new CloudClient(conn, c.http);
+    const l = withPics();
+    const first = await client.save(l, 'PC');
+    expect(sheets['Quizzo images'].getLastRow()).toBeGreaterThan(2); // header + chunks of 2 pictures
+    const rowsAfterFirst = sheets['Quizzo images'].getLastRow();
+    const backupText = JSON.parse(JSON.parse((await http(`${conn.url}?action=get&id=${first.id}&key=k1`, { method: 'GET' })).text).data);
+    expect(backupText.imageIds).toHaveLength(2);
+    expect(backupText.images).toBeUndefined(); // the backup itself is small
+
+    // A second backup with an edit: no picture uploaded again.
+    c.calls.length = 0;
+    await client.save({ ...l, decks: [{ ...l.decks[0], title: 'D2' }] }, 'PC');
+    expect(c.calls).not.toContain('putImages');
+    expect(sheets['Quizzo images'].getLastRow()).toBe(rowsAfterFirst);
+
+    // Restore on a new device: pictures come back, cards point at them.
+    const restored = parseLibraryBackup(await client.get(first.id)).library!;
+    expect(restored.images).toEqual(l.images);
+    expect(restored.decks[0].cards[0].image).toBe(l.decks[0].cards[0].image);
+
+    // Restore on a device that has the pictures: none downloaded.
+    c.calls.length = 0;
+    await client.get(first.id, l.images);
+    expect(c.calls).not.toContain('getImages');
+  });
+
+  it('keeps pictures inside the backup for Sheets still on script version 1', async () => {
+    const { http } = fakeScript('k1');
+    const v1: typeof http = async (url, init) => {
+      if (new URL(url).searchParams.get('action') === 'ping') return { status: 200, text: '{"ok":true,"version":1,"backups":0}' };
+      return http(url, init);
+    };
+    const client = new CloudClient(conn, v1);
+    const l = withPics();
+    const info = await client.save(l, 'PC');
+    const restored = parseLibraryBackup(await client.get(info.id)).library!;
+    expect(restored.images).toEqual(l.images);
+  });
+
+  it('turns pictures in older backups (inside the cards) into stored pictures', () => {
+    const old = { ...emptyLibrary(), decks: [{ ...withPics().decks[0], cards: [{ id: 'c1', type: 'flashcard', front: 'a', back: 'b', image: pic(1) }] }] };
+    const r = parseLibraryBackup(JSON.stringify(old)).library!;
+    expect(r.decks[0].cards[0].image).toMatch(/^img:/);
+    expect(Object.values(r.images!)).toEqual([pic(1)]);
   });
 });

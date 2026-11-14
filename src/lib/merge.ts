@@ -196,6 +196,7 @@ export function mergeLibraries(mine: Library, backup: Library, choose: (c: Confl
       attempts: attempts.length ? attempts : undefined,
       customQuizzes: customQuizzes.length ? customQuizzes : undefined,
       seeded: Array.from(new Set([...(mine.seeded ?? []), ...(backup.seeded ?? [])])),
+      images: { ...backup.images, ...mine.images },
       deleted: Object.keys(deleted).length ? deleted : undefined,
     },
     conflicts,

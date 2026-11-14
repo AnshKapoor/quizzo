@@ -6,6 +6,9 @@
 import type { CloudSettings, Library } from '../types';
 import { normalizeLibrary } from './storage';
 import { validateDeck } from './validate';
+import { fingerprint } from './util';
+
+export { fingerprint };
 
 // ---- the library as a backup ----
 
@@ -18,18 +21,6 @@ export function backupPayload(lib: Library): string {
 /** A backup as stored: the payload plus when and on which device it was made. */
 export function stampedBackup(lib: Library, device: string, now = Date.now()): string {
   return JSON.stringify({ ...JSON.parse(backupPayload(lib)), backedUpAt: now, backedUpFrom: device });
-}
-
-/** Short, stable fingerprint so auto backup can skip uploads when nothing changed. */
-export function fingerprint(text: string): string {
-  let h1 = 0x811c9dc5;
-  let h2 = 0x01000193;
-  for (let i = 0; i < text.length; i++) {
-    const c = text.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 0x01000193);
-    h2 = Math.imul(h2 ^ c, 0x5bd1e995);
-  }
-  return `${text.length.toString(36)}-${(h1 >>> 0).toString(36)}-${(h2 >>> 0).toString(36)}`;
 }
 
 export function librarySummary(lib: Library) {
@@ -240,25 +231,90 @@ export class CloudClient {
     return data as T;
   }
 
+  private version?: number;
+
   async ping(): Promise<{ version: number; backups: number }> {
-    return this.call({ action: 'ping' });
+    const r = await this.call<{ version: number; backups: number }>({ action: 'ping' });
+    this.version = Number(r.version) || 1;
+    return r;
+  }
+
+  /** Version of the script in the Sheet (1 = stores pictures inside every backup). */
+  async scriptVersion(): Promise<number> {
+    if (this.version === undefined) await this.ping();
+    return this.version!;
   }
 
   async list(): Promise<CloudBackupInfo[]> {
     return (await this.call<{ backups: CloudBackupInfo[] }>({ action: 'list' })).backups;
   }
 
-  async get(id: string): Promise<string> {
-    return (await this.call<{ data: string }>({ action: 'get', id })).data;
+  /**
+   * A backup's text, complete with its pictures. Pictures this device already has (`have`) aren't downloaded.
+   */
+  async get(id: string, have: Record<string, string> = {}): Promise<string> {
+    const text = (await this.call<{ data: string }>({ action: 'get', id })).data;
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return text; // let the restore code report it
+    }
+    if (!Array.isArray(data?.imageIds)) return text; // script version 1: pictures are inside
+    const ids: string[] = data.imageIds;
+    const images: Record<string, string> = {};
+    const missing: string[] = [];
+    for (const i of ids) {
+      if (have[i] !== undefined) images[i] = have[i];
+      else missing.push(i);
+    }
+    for (let i = 0; i < missing.length; i += IMAGE_BATCH_IDS) {
+      const got = await this.call<{ images: Record<string, string> }>(
+        { action: 'getImages' },
+        { ids: missing.slice(i, i + IMAGE_BATCH_IDS) },
+      );
+      Object.assign(images, got.images);
+    }
+    const { imageIds: _ids, ...rest } = data;
+    return JSON.stringify({ ...rest, images });
   }
 
+  /**
+   * Backs up the library. With script version 2 the pictures go into their own tab, each uploaded once:
+   * only pictures the Sheet doesn't have yet are sent, and the backup itself just lists their names.
+   */
   async save(lib: Library, device: string): Promise<CloudBackupInfo> {
     const s = librarySummary(lib);
-    return (
-      await this.call<{ backup: CloudBackupInfo }>({ action: 'save' }, { device, ...s, data: stampedBackup(lib, device) })
-    ).backup;
+    const full = JSON.parse(stampedBackup(lib, device));
+    const images: Record<string, string> = full.images ?? {};
+    let data: string;
+    if (Object.keys(images).length && (await this.scriptVersion()) >= 2) {
+      const stored = new Set((await this.call<{ ids: string[] }>({ action: 'imageIds' })).ids);
+      let batch: Record<string, string> = {};
+      let size = 0;
+      const flush = async () => {
+        if (!size) return;
+        await this.call({ action: 'putImages' }, { images: batch });
+        batch = {};
+        size = 0;
+      };
+      for (const [id, src] of Object.entries(images)) {
+        if (stored.has(id)) continue;
+        batch[id] = src;
+        size += src.length;
+        if (size >= IMAGE_BATCH_CHARS) await flush();
+      }
+      await flush();
+      const { images: _img, ...rest } = full;
+      data = JSON.stringify({ ...rest, imageIds: Object.keys(images) });
+    } else data = JSON.stringify(full);
+    return (await this.call<{ backup: CloudBackupInfo }>({ action: 'save' }, { device, ...s, data })).backup;
   }
 }
+
+/** Pictures per upload request (characters) and per download request (count), well under Google's limits. */
+const IMAGE_BATCH_CHARS = 3_000_000;
+const IMAGE_BATCH_IDS = 40;
 
 export function defaultDeviceName(): string {
   const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent;
@@ -271,7 +327,7 @@ export function defaultDeviceName(): string {
 
 // ---- the script that runs inside the user's Google Sheet ----
 
-export const SCRIPT_VERSION = 1;
+export const SCRIPT_VERSION = 2;
 
 /** Google Apps Script source. KEY is filled in per user. */
 export function appsScript(key: string): string {
@@ -288,6 +344,7 @@ const KEEP = 20;        // how many backups to keep
 const CHUNK = 40000;    // characters per cell (a cell holds at most 50,000)
 const DATA_TAB = 'Quizzo backups';
 const INFO_TAB = 'Quizzo';
+const IMG_TAB = 'Quizzo images'; // each card picture once, shared by all backups
 
 function doGet(e) {
   return handle_(e && e.parameter ? e.parameter : {}, null);
@@ -307,6 +364,9 @@ function handle_(p, body) {
     else if (p.action === 'list') result = { backups: list_() };
     else if (p.action === 'get') result = { data: get_(String(p.id)) };
     else if (p.action === 'save' && body) result = { backup: save_(body) };
+    else if (p.action === 'imageIds') result = { ids: imageIds_() };
+    else if (p.action === 'putImages' && body) result = { stored: putImages_(body.images || {}) };
+    else if (p.action === 'getImages' && body) result = { images: getImages_(body.ids || []) };
     else throw new Error('Unknown action');
     result.ok = true;
   } catch (err) {
@@ -382,6 +442,99 @@ function save_(b) {
   }
 }
 
+// ---- pictures: one row per piece, named by a fingerprint of the picture ----
+
+function imageSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(IMG_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(IMG_TAB);
+    sh.getRange(1, 1, 1, 5).setValues([['id', 'part', 'parts', 'added', 'data']]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function imageRows_() {
+  const sh = imageSheet_();
+  const n = sh.getLastRow() - 1;
+  return n > 0 ? sh.getRange(2, 1, n, 5).getValues() : [];
+}
+
+/** Ids of pictures stored completely. */
+function imageIds_() {
+  const parts = {};
+  imageRows_().forEach(function (r) {
+    const id = String(r[0]);
+    if (!id) return;
+    parts[id] = parts[id] || { have: 0, need: Number(r[2]) };
+    parts[id].have++;
+  });
+  return Object.keys(parts).filter(function (id) { return parts[id].have === parts[id].need; });
+}
+
+function putImages_(images) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const have = {};
+    imageIds_().forEach(function (id) { have[id] = true; });
+    const values = [];
+    const now = Date.now();
+    Object.keys(images).forEach(function (id) {
+      const src = String(images[id] || '');
+      if (have[id] || !/^[0-9a-z-]+$/.test(id) || src.indexOf('data:image/') !== 0) return;
+      const pieces = [];
+      for (let i = 0; i < src.length; i += CHUNK) pieces.push(src.slice(i, i + CHUNK));
+      pieces.forEach(function (piece, i) { values.push([id, i + 1, pieces.length, now, '|' + piece]); });
+      have[id] = true;
+    });
+    if (values.length) {
+      const sh = imageSheet_();
+      const range = sh.getRange(sh.getLastRow() + 1, 1, values.length, 5);
+      range.setNumberFormat('@');
+      range.setValues(values);
+    }
+    return values.length;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getImages_(ids) {
+  const want = {};
+  ids.forEach(function (id) { want[String(id)] = true; });
+  const parts = {};
+  imageRows_().forEach(function (r) {
+    const id = String(r[0]);
+    if (want[id]) (parts[id] = parts[id] || []).push(r);
+  });
+  const out = {};
+  Object.keys(parts).forEach(function (id) {
+    const rows = parts[id].sort(function (a, b) { return Number(a[1]) - Number(b[1]); });
+    if (rows.length === Number(rows[0][2])) out[id] = rows.map(function (r) { return String(r[4]).slice(1); }).join('');
+  });
+  return out;
+}
+
+/** Drops pictures no kept backup uses (only ones older than a day, so uploads in progress stay). */
+function pruneImages_() {
+  const used = {};
+  list_().forEach(function (b) {
+    try {
+      const ids = JSON.parse(get_(b.id)).imageIds;
+      if (ids) ids.forEach(function (id) { used[id] = true; });
+    } catch (err) {}
+  });
+  const sh = imageSheet_();
+  const all = imageRows_();
+  const old = Date.now() - 24 * 60 * 60 * 1000;
+  const kept = all.filter(function (r) { return used[String(r[0])] || Number(r[3]) > old; });
+  if (kept.length === all.length) return;
+  sh.getRange(2, 1, all.length, 5).clearContent();
+  if (kept.length) sh.getRange(2, 1, kept.length, 5).setNumberFormat('@').setValues(kept);
+}
+
 function prune_(sh) {
   const keep = {};
   list_().slice(0, KEEP).forEach(function (b) { keep[b.id] = true; });
@@ -390,6 +543,7 @@ function prune_(sh) {
   if (kept.length === all.length) return;
   sh.getRange(2, 1, all.length, 8).clearContent();
   if (kept.length) sh.getRange(2, 1, kept.length, 8).setNumberFormat('@').setValues(kept);
+  if (SpreadsheetApp.getActiveSpreadsheet().getSheetByName(IMG_TAB)) pruneImages_();
 }
 
 function writeInfo_(created, device, decks, cards, titles) {

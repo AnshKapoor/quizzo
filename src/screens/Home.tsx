@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import type { Library } from '../types';
 import { deckStats } from '../lib/library';
 import { deckToFile, downloadJson, slug } from '../lib/storage';
+import { inlineDeckImages } from '../lib/image';
 import { CUSTOM_QUIZ_OWNER, customQuizItems, customQuizToDeck, percent, quizAttempts, quizSummary } from '../lib/quiz';
 
 interface Props {
@@ -128,7 +129,7 @@ export function Home(p: Props) {
                         title="Export as a deck file to share"
                         aria-label={`Export ${q.title} as a deck file`}
                         disabled={!available}
-                        onClick={() => downloadJson(`${slug(q.title)}.quizzo.json`, deckToFile(customQuizToDeck(library, q)))}
+                        onClick={() => downloadJson(`${slug(q.title)}.quizzo.json`, deckToFile(inlineDeckImages(customQuizToDeck(library, q), library.images)))}
                       >
                         ⤓
                       </button>

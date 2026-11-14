@@ -48,7 +48,7 @@ Other features: built-in help (how to create decks and write every card type, wi
 
 - **React + TypeScript + Vite**: the whole app, one codebase (`src/`)
 - **Electron**: desktop shell (`electron/`), packaged with electron-builder. Library saved to `%APPDATA%\Quizzo\library.json`
-- **Capacitor**: Android shell (`android/`). Library currently saved in WebView storage
+- **Capacitor**: Android shell (`android/`). Library saved in the WebView's IndexedDB (also used by the browser version)
 
 ## Running it
 

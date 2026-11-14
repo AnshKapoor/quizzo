@@ -31,3 +31,16 @@ export function moveItem<T>(items: readonly T[], from: number, to: number): T[] 
   a.splice(to, 0, x);
   return a;
 }
+
+/** Short, stable fingerprint of a text (auto-backup change detection, picture names). */
+export function fingerprint(text: string): string {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193);
+    h2 = Math.imul(h2 ^ c, 0x5bd1e995);
+  }
+  return `${text.length.toString(36)}-${(h1 >>> 0).toString(36)}-${(h2 >>> 0).toString(36)}`;
+}
+

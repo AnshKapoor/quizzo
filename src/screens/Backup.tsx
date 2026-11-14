@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Library } from '../types';
 import {
   appsScript,
+  SCRIPT_VERSION,
   backupPayload,
   stampedBackup,
   CloudClient,
@@ -59,6 +60,8 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string; testUrl?: string } | null>(null);
   const [backups, setBackups] = useState<CloudBackupInfo[] | null>(null);
+  /** Version of the script in the connected Sheet (older ones store every picture in every backup). */
+  const [scriptVersion, setScriptVersion] = useState<number | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [undo, setUndo] = useState<Library | null>(null);
   /** Conflicts found when merging the pending backup, with the side chosen for each. */
@@ -81,7 +84,10 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
 
   const refresh = () =>
     run('Loading backups…', async () => {
-      if (cloud) setBackups(await new CloudClient(cloud).list());
+      if (!cloud) return;
+      const client = new CloudClient(cloud);
+      setBackups(await client.list());
+      setScriptVersion(await client.scriptVersion());
     });
 
   useEffect(() => {
@@ -136,7 +142,7 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
 
   const restoreCloud = (b: CloudBackupInfo) =>
     run('Downloading backup…', async () => {
-      askRestore(`the backup from ${when(b.created)} (${b.device})`, await new CloudClient(cloud!).get(b.id));
+      askRestore(`the backup from ${when(b.created)} (${b.device})`, await new CloudClient(cloud!).get(b.id, library.images));
     });
 
   const finish = (text: string) => {
@@ -394,6 +400,26 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
               </ul>
             )}
             <small className="sub">The Sheet keeps the 20 newest backups.</small>
+
+            {scriptVersion !== null && scriptVersion < SCRIPT_VERSION && (
+              <div className="notice">
+                <strong>Update the script in your Sheet for much smaller backups.</strong> The script there is
+                version {scriptVersion}; it stores every picture again in every backup. Version {SCRIPT_VERSION} stores
+                each picture once and only uploads new ones. Backups keep working either way.
+                <ol>
+                  <li>
+                    <button type="button" onClick={() => flashCopied('update', appsScript(cloud.key))}>
+                      {copied === 'update' ? '✓ Copied' : 'Copy new script'}
+                    </button>
+                  </li>
+                  <li>In the Sheet: Extensions → Apps Script. Select all the old code, paste the new script, 💾 Save.</li>
+                  <li>
+                    Deploy → Manage deployments → ✎ Edit → Version: <b>New version</b> → Deploy. The link stays the same.
+                  </li>
+                  <li>Come back here and press ↻ Refresh list.</li>
+                </ol>
+              </div>
+            )}
 
             <h3>Use it on another device</h3>
             <p className="sub">

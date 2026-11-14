@@ -18,7 +18,10 @@ interface BaseCard {
   type: CardType;
   tags?: string[];
   hint?: string;
-  /** Picture shown with the question / instruction: a data URL (pasted in the editor) or an https link. */
+  /**
+   * Picture shown with the question / instruction. In the library: `img:<id>`, pointing into `Library.images`.
+   * In deck files: a data URL or an https link.
+   */
   image?: string;
   /** Picture shown with the hint. */
   hintImage?: string;
@@ -260,6 +263,11 @@ export interface Library {
   customQuizzes?: CustomQuiz[];
   appearance?: Appearance;
   settings?: Settings;
+  /**
+   * Card pictures, stored once each, keyed by a fingerprint of the picture (cards refer to `img:<id>`).
+   * The same picture always gets the same id, so it is never stored or uploaded twice.
+   */
+  images?: Record<string, string>;
   /**
    * When decks and cards were deleted, keyed `deckId` or `deckId:cardId` (epoch ms), so merging a backup
    * doesn't bring them back.

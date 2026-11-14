@@ -26,6 +26,8 @@ import { QuizBuilder } from './screens/QuizBuilder';
 import { exampleDeck } from './lib/help';
 import { Help } from './screens/Help';
 import { Backup } from './screens/Backup';
+import { normalizeImages } from './lib/image';
+import { ImagesContext } from './components/ImageContext';
 import { backupPayload, CloudClient, defaultDeviceName, fingerprint } from './lib/cloud';
 
 /** Auto backup waits this long after the last change, so a study session isn't uploaded answer by answer. */
@@ -98,7 +100,13 @@ export default function App() {
 
   if (!lib) return <div className="loading">Loading…</div>;
 
-  const update = (fn: (l: Library) => Library) => setLib((l) => (l ? fn(l) : l));
+  // Any change to decks (edit, import, restore, merge) files new pictures into the store and drops unused ones.
+  const update = (fn: (l: Library) => Library) =>
+    setLib((l) => {
+      if (!l) return l;
+      const next = fn(l);
+      return next.decks !== l.decks ? normalizeImages(next) : next;
+    });
   const deck = 'deckId' in view ? lib.decks.find((d) => d.id === view.deckId) : undefined;
   const home = () => setView({ name: 'home' });
   const help = (topic?: string) => setView((v) => (v.name === 'help' ? v : { name: 'help', topic, from: v }));
@@ -296,9 +304,9 @@ export default function App() {
   }
 
   return (
-    <>
+    <ImagesContext.Provider value={lib.images}>
       {saveError && <div className="banner error">Could not save: {saveError}</div>}
       {screen}
-    </>
+    </ImagesContext.Provider>
   );
 }

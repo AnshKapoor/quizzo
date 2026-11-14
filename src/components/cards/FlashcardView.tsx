@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FlashcardCard, Grade } from '../../types';
 import { Explanation, SpeakButton } from '../common';
 import type { CardViewProps } from './CardView';
+import { useImageSrc } from '../ImageContext';
 
 const GRADES: { grade: Grade; label: string; key: string }[] = [
   { grade: 'again', label: 'Again', key: '1' },
@@ -13,6 +14,7 @@ const GRADES: { grade: Grade; label: string; key: string }[] = [
 export function FlashcardView({ card, lang, onAnswer }: CardViewProps<FlashcardCard>) {
   const [revealed, setRevealed] = useState(false);
   const [graded, setGraded] = useState<Grade | null>(null);
+  const hintImage = useImageSrc(card.hintImage);
 
   const grade = (g: Grade) => {
     if (graded) return;
@@ -49,7 +51,7 @@ export function FlashcardView({ card, lang, onAnswer }: CardViewProps<FlashcardC
           <SpeakButton text={card.front} lang={lang} />
         </div>
         {!revealed && card.hint && <div className="hint">Hint: {card.hint}</div>}
-        {!revealed && card.hintImage && <img className="card-image hint-image" src={card.hintImage} alt="Hint" />}
+        {!revealed && hintImage && <img className="card-image hint-image" src={hintImage} alt="Hint" />}
         {revealed ? (
           <div className="flip-back">
             <div className="answer">{card.back}</div>

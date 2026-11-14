@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { imageFromTransfer, imageKb, imageToDataUrl } from '../lib/image';
+import { useImageSrc } from './ImageContext';
 
 interface Props {
   label: string;
@@ -13,6 +14,7 @@ export function ImageField({ label, value, onChange, help }: Props) {
   const file = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState(false);
+  const src = useImageSrc(value);
 
   const take = async (f: Blob | null | undefined) => {
     if (!f) return;
@@ -29,9 +31,9 @@ export function ImageField({ label, value, onChange, help }: Props) {
       <span>{label}</span>
       {value ? (
         <div className="image-preview">
-          <img src={value} alt="" />
+          {src ? <img src={src} alt="" /> : <small className="error">⚠ Picture missing</small>}
           <div className="row">
-            <small className="sub">{value.startsWith('data:') ? `${imageKb(value)} KB` : 'Linked picture'}</small>
+            <small className="sub">{src?.startsWith('data:') ? `${imageKb(src)} KB` : src ? 'Linked picture' : ''}</small>
             <button type="button" className="ghost" onClick={() => file.current?.click()}>
               Replace
             </button>

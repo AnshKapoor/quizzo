@@ -2,9 +2,10 @@ import type { Deck, DeckFile, Library } from '../types';
 import starter from '../data/german-a1-starter.quizzo.json';
 import practice from '../data/german-a1-practice.quizzo.json';
 import { validateDeck } from './validate';
+import { normalizeImages } from './image';
 
 // Desktop (Electron) exposes a JSON file on disk through the preload script.
-// Browser / Android fall back to localStorage for now.
+// Browser / Android keep it in IndexedDB (older versions used localStorage; it is moved over on first save).
 declare global {
   interface Window {
     quizzoNative?: {
@@ -51,12 +52,78 @@ export function normalizeLibrary(lib: Library): Library {
     : undefined;
   const progress = lib.progress && typeof lib.progress === 'object' ? lib.progress : {};
   const attempts = Array.isArray(lib.attempts) ? lib.attempts : undefined;
-  return { ...lib, format: 'quizzo-library', version: 1, progress, attempts, customQuizzes };
+  const images = lib.images && typeof lib.images === 'object' ? lib.images : undefined;
+  return normalizeImages({ ...lib, format: 'quizzo-library', version: 1, progress, attempts, customQuizzes, images });
+}
+
+// ---- browser / Android storage: IndexedDB (hundreds of MB) instead of localStorage (about 5 MB) ----
+
+const DB_NAME = 'quizzo';
+const DB_STORE = 'kv';
+
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') return reject(new Error('IndexedDB is not available'));
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+let dbPromise: Promise<IDBDatabase> | null = null;
+const db = () => (dbPromise ??= openDb());
+
+async function idb<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest): Promise<T> {
+  const d = await db();
+  return new Promise<T>((resolve, reject) => {
+    const tx = d.transaction(DB_STORE, mode);
+    const req = run(tx.objectStore(DB_STORE));
+    tx.oncomplete = () => resolve(req.result as T);
+    tx.onerror = tx.onabort = () => reject(tx.error ?? req.error);
+  });
+}
+
+/** The saved library text: IndexedDB first, then (older versions) localStorage. */
+async function readBrowser(): Promise<string | null> {
+  try {
+    const raw = await idb<string | undefined>('readonly', (s) => s.get(KEY));
+    if (raw) return raw;
+  } catch (e) {
+    console.warn('IndexedDB unavailable, using localStorage', e);
+  }
+  return localStorage.getItem(KEY);
+}
+
+async function writeBrowser(raw: string): Promise<void> {
+  try {
+    await idb('readwrite', (s) => s.put(raw, KEY));
+  } catch (e) {
+    console.warn('IndexedDB write failed, using localStorage', e);
+    localStorage.setItem(KEY, raw);
+    return;
+  }
+  // Moved over: free the old, small localStorage copy (it would go stale anyway).
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Asks the browser not to clear Quizzo's storage when the device runs low on space. */
+function askPersistent() {
+  try {
+    navigator.storage?.persist?.().catch(() => {});
+  } catch {
+    /* ignore */
+  }
 }
 
 export async function loadLibrary(): Promise<Library> {
   try {
-    const raw = window.quizzoNative ? await window.quizzoNative.readLibrary() : localStorage.getItem(KEY);
+    const raw = window.quizzoNative ? await window.quizzoNative.readLibrary() : await readBrowser();
+    if (!window.quizzoNative) askPersistent();
     if (raw) {
       const lib = JSON.parse(raw) as Library;
       if (lib?.format === 'quizzo-library' && Array.isArray(lib.decks)) return addBuiltinDecks(normalizeLibrary(lib));
@@ -68,9 +135,8 @@ export async function loadLibrary(): Promise<Library> {
 }
 
 export async function saveLibrary(lib: Library): Promise<void> {
-  const raw = JSON.stringify(lib, null, 2);
-  if (window.quizzoNative) await window.quizzoNative.writeLibrary(raw);
-  else localStorage.setItem(KEY, raw);
+  if (window.quizzoNative) await window.quizzoNative.writeLibrary(JSON.stringify(lib, null, 2));
+  else await writeBrowser(JSON.stringify(lib));
 }
 
 // ---- export ----
