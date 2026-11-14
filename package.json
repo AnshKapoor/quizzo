@@ -1,7 +1,7 @@
 {
   "name": "quizzo",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Interactive flashcards with quiz-style card types (MCQ, matching, cloze, word order). German first.",
   "type": "module",
   "main": "electron/main.cjs",

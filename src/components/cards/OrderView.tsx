@@ -4,6 +4,7 @@ import { sameSentence } from '../../lib/answer';
 import { shuffleIndexes } from '../../lib/util';
 import { Explanation, Feedback, SpeakButton } from '../common';
 import { useDragDrop } from '../useDragDrop';
+import { useFlip } from '../useFlip';
 import type { CardViewProps } from './CardView';
 
 export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
@@ -23,10 +24,13 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
   };
 
   const locked = result !== null;
+  // Words glide between the pool and the sentence.
+  const flip = useFlip<HTMLDivElement>([built, locked]);
 
   // Drag a word into the sentence (onto a word = insert before it), within it, or back to the pool.
   const startDrag = useDragDrop<number>((tok, zone) => {
     if (locked) return;
+    flip.skipNext(tok); // already where it was dropped
     setBuilt((b) => {
       const rest = b.filter((i) => i !== tok);
       if (zone === 'pool') return rest;
@@ -39,7 +43,7 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
   });
 
   return (
-    <div className="card-body">
+    <div className="card-body" ref={flip.ref}>
       <div className="prompt">{card.prompt || 'Put the words in order'}</div>
       {card.translation && <div className="sub translation">{card.translation}</div>}
       <div data-drop="line" className={`order-line dropzone ${locked ? (result ? 'correct' : 'wrong') : ''}`}>
@@ -48,6 +52,7 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
           <button
             key={i}
             type="button"
+            data-flip={i}
             data-drop={`w:${k}`}
             className="token draggable"
             disabled={locked}
@@ -58,11 +63,14 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
           </button>
         ))}
       </div>
+      {/* Hidden once checked: every word is in the sentence, and the empty pool would leave a gap. */}
+      {!locked && (
       <div data-drop="pool" className="order-pool">
         {pool.map((i) => (
           <button
             key={i}
             type="button"
+            data-flip={i}
             className={`token draggable ${built.includes(i) ? 'used' : ''}`}
             disabled={locked || built.includes(i)}
             onPointerDown={(e) => startDrag(e, i)}
@@ -72,6 +80,7 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
           </button>
         ))}
       </div>
+      )}
       {!locked && (
         <button type="button" className="primary" disabled={built.length !== card.tokens.length} onClick={check}>
           Check

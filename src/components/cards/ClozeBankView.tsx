@@ -5,6 +5,7 @@ import { clozeSolution, parseCloze } from '../../lib/cloze';
 import { shuffle } from '../../lib/util';
 import { Explanation, Feedback, SpeakButton } from '../common';
 import { useDragDrop } from '../useDragDrop';
+import { useFlip } from '../useFlip';
 import type { CardViewProps } from './CardView';
 
 /** Complete-the-sentence with a word bank: tap or drag words into the blanks. */
@@ -33,7 +34,12 @@ export function ClozeBankView({ card, lang, onAnswer }: CardViewProps<ClozeCard>
     setFilled((f) => f.map((t, i) => (i === blank ? null : t)));
     setActive(blank);
   };
-  const startDrag = useDragDrop<number>((tile, zone) => fill(Number(zone.slice(2)), tile));
+  // Words glide from the bank into the blanks and back.
+  const flip = useFlip<HTMLDivElement>([filled, results]);
+  const startDrag = useDragDrop<number>((tile, zone) => {
+    flip.skipNext(tile); // already where it was dropped
+    fill(Number(zone.slice(2)), tile);
+  });
 
   const check = () => {
     const r = blanks.map((b, i) => {
@@ -48,7 +54,7 @@ export function ClozeBankView({ card, lang, onAnswer }: CardViewProps<ClozeCard>
   const correct = results?.every(isAccepted) ?? false;
 
   return (
-    <div className="card-body">
+    <div className="card-body" ref={flip.ref}>
       {card.translation && <div className="sub translation">{card.translation}</div>}
       <div className="cloze">
         {segments.map((s, k) => {
@@ -61,6 +67,7 @@ export function ClozeBankView({ card, lang, onAnswer }: CardViewProps<ClozeCard>
               <button
                 type="button"
                 data-drop={`b:${s.index}`}
+                data-flip={t === null ? undefined : t}
                 className={`bank-blank dropzone ${state}`}
                 disabled={!!results}
                 onClick={() => (t === null ? setActive(s.index) : clear(s.index))}
@@ -78,6 +85,7 @@ export function ClozeBankView({ card, lang, onAnswer }: CardViewProps<ClozeCard>
             <button
               key={i}
               type="button"
+              data-flip={i}
               className={`token draggable ${filled.includes(i) ? 'used' : ''}`}
               disabled={filled.includes(i)}
               onPointerDown={(e) => startDrag(e, i)}
