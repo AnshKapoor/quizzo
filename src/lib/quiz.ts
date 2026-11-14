@@ -1,5 +1,5 @@
 // Timed quizzes: picking the questions, keeping results, and formatting times.
-import type { Card, CustomQuiz, Deck, Library, QuizAttempt, QuizPreset, StudyItem } from '../types';
+import type { AnswerResult, Card, CustomQuiz, Deck, Grade, Library, QuizAttempt, QuizPreset, StudyCard, StudyItem } from '../types';
 import { spreadOut } from './library';
 import { shuffle, uid } from './util';
 import { expandCard, expandDeck } from './vocab';
@@ -26,6 +26,20 @@ export function defaultQuestionTime(lib: Library): number {
 export function questionLimit(quiz: QuizPreset, item: StudyItem, defaultTime: number): number {
   if (quiz.cardTimes) return item.card.time && item.card.time > 0 ? item.card.time : defaultTime;
   return quiz.perQuestion;
+}
+
+export const GRADE_LABELS: Record<Grade, string> = { again: 'Again', hard: 'Hard', good: 'Good', easy: 'Easy' };
+
+/**
+ * Grade of an answer to a question with its own clock. Wrong = again. Right within the first half of the
+ * time = easy, within three quarters = good, in the last quarter = hard. Flashcards keep the learner's own
+ * grade, and questions without a clock keep the card's grade.
+ */
+export function speedGrade(r: AnswerResult, card: StudyCard, seconds: number, limit: number): Grade {
+  if (!r.correct) return 'again';
+  if (card.type === 'flashcard' || !(limit > 0)) return r.grade;
+  const used = seconds / limit;
+  return used <= 0.5 ? 'easy' : used <= 0.75 ? 'good' : 'hard';
 }
 
 // New quizzes give every question its card's own time.

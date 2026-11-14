@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AnswerResult, Grade, QuizAttempt, QuizPreset } from '../types';
 import { CARD_TYPE_LABELS, cardSummary } from '../lib/cardForm';
-import { buildQuizQueue, CUSTOM_QUIZ_OWNER, formatTime, percent, questionLimit, quizSummary, type QuizItem } from '../lib/quiz';
+import {
+  buildQuizQueue,
+  CUSTOM_QUIZ_OWNER,
+  formatTime,
+  GRADE_LABELS,
+  percent,
+  questionLimit,
+  quizSummary,
+  speedGrade,
+  type QuizItem,
+} from '../lib/quiz';
 import { VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
 import { Stage } from '../components/Stage';
@@ -46,6 +56,8 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   const [timeUp, setTimeUp] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [run, setRun] = useState(0);
+  /** Grade from answer speed for the current question (questions with their own clock only). */
+  const [speed, setSpeed] = useState<{ grade: Grade; seconds: number } | null>(null);
   const reported = useRef(false);
 
   const available = pool.length;
@@ -96,6 +108,7 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   const goTo = (next: number, final: Outcome[]) => {
     if (next >= queue.length) return finish(false, final);
     setResult(null);
+    setSpeed(null);
     setPos(next);
     setQuestionAt(Date.now());
   };
@@ -103,7 +116,13 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   const answer = (r: AnswerResult) => {
     if (phase !== 'running' || result) return;
     setResult(r);
-    onRecord(queue[pos].deckId, queue[pos].key, r.grade);
+    let grade = r.grade;
+    if (limit) {
+      const seconds = (Date.now() - questionAt) / 1000;
+      grade = speedGrade(r, queue[pos].card, seconds, limit);
+      setSpeed({ grade, seconds });
+    }
+    onRecord(queue[pos].deckId, queue[pos].key, grade);
     setOutcomes((o) => o.map((x, i) => (i === pos ? (r.correct ? 'right' : 'wrong') : x)));
   };
 
@@ -120,6 +139,8 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
     else if (questionLeft !== null && questionLeft <= 0) {
       const final = outcomes.map((x, i) => (i === pos ? 'timeout' : x));
       setOutcomes(final);
+      // Out of time counts like a wrong answer for learning progress.
+      onRecord(queue[pos].deckId, queue[pos].key, 'again');
       goTo(pos + 1, final);
     }
   });
@@ -230,6 +251,11 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
                 <button type="button" className="ghost" onClick={() => goTo(pos + 1, outcomes)}>
                   Skip
                 </button>
+              )}
+              {speed && (
+                <span className={`speed-grade grade-${speed.grade}`} title="Marked by how quickly you answered">
+                  {GRADE_LABELS[speed.grade]} · {Math.max(1, Math.round(speed.seconds))} s of {limit} s
+                </span>
               )}
               {result && (
                 <button type="button" className="primary" autoFocus onClick={() => goTo(pos + 1, outcomes)}>

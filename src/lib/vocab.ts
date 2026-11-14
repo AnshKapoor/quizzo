@@ -22,7 +22,7 @@ function hash(s: string): number {
 
 export function expandVocab(v: VocabCard, deck?: Deck): StudyItem[] {
   const full = fullWord(v);
-  const common = { tags: v.tags, hint: v.hint, time: v.time };
+  const common = { tags: v.tags, hint: v.hint, time: v.time, image: v.image, hintImage: v.hintImage };
   const out: { variant: string; card: StudyCard }[] = [];
 
   out.push({

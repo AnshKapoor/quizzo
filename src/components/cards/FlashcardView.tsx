@@ -49,6 +49,7 @@ export function FlashcardView({ card, lang, onAnswer }: CardViewProps<FlashcardC
           <SpeakButton text={card.front} lang={lang} />
         </div>
         {!revealed && card.hint && <div className="hint">Hint: {card.hint}</div>}
+        {!revealed && card.hintImage && <img className="card-image hint-image" src={card.hintImage} alt="Hint" />}
         {revealed ? (
           <div className="flip-back">
             <div className="answer">{card.back}</div>

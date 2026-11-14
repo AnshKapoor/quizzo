@@ -162,7 +162,13 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
         <p>These fields are available on every card type:</p>
         <ul>
           <li>
-            <b>Hint</b>: a small clue shown before answering (on flashcards).
+            <b>Hint</b>: a small clue. Learners see it by pressing <b>💡 Show hint</b> (flashcards show it on the front).
+          </li>
+          <li>
+            <b>Pictures</b>: a <b>question picture</b> shown with the question or instruction, and a <b>hint picture</b>{' '}
+            shown with the hint. Paste one with Ctrl+V (pasting while typing the question adds it to the question,
+            while typing the hint adds it to the hint), drop a file, or choose one. Pictures are made smaller
+            automatically and saved inside the deck, so they are included when you export or back up.
           </li>
           <li>
             <b>Explanation</b>: shown after answering, e.g. the grammar rule. Short explanations help a lot.

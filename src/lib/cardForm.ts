@@ -40,6 +40,9 @@ export interface CardForm {
   tags: string;
   /** Seconds in quizzes timed per card; empty = the default from Settings. */
   time: string;
+  /** Picture with the question (data URL or https link); empty = none. */
+  image: string;
+  hintImage: string;
 }
 
 export const CARD_TYPE_LABELS: Record<CardType, string> = {
@@ -84,6 +87,8 @@ export function emptyForm(type: CardType): CardForm {
     explanation: '',
     tags: '',
     time: '',
+    image: '',
+    hintImage: '',
   };
 }
 
@@ -93,6 +98,8 @@ export function cardToForm(card: Card): CardForm {
   f.explanation = card.explanation ?? '';
   f.tags = (card.tags ?? []).join(', ');
   f.time = card.time ? String(card.time) : '';
+  f.image = card.image ?? '';
+  f.hintImage = card.hintImage ?? '';
   switch (card.type) {
     case 'flashcard':
       Object.assign(f, { front: card.front, back: card.back, example: card.example ?? '' });
@@ -167,6 +174,8 @@ export function formToCard(f: CardForm, id: string): { card?: Card; error?: stri
     explanation: opt(f.explanation),
     tags: tags.length ? tags : undefined,
     time: f.time.trim() ? seconds : undefined,
+    image: f.image || undefined,
+    hintImage: f.hintImage || undefined,
   };
 
   let card: Card;

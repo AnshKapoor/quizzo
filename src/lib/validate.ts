@@ -2,6 +2,7 @@ import type { Card, CardType, Deck, QuizPreset } from '../types';
 import { blankCount } from './cloze';
 import { parseSpot } from './spot';
 import { uid } from './util';
+import { isImageSource } from './image';
 
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;
 const isStrArr = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
@@ -11,6 +12,8 @@ export function validateCard(c: any): string | null {
   if (!c || typeof c !== 'object') return 'not an object';
   if (c.time !== undefined && !(typeof c.time === 'number' && Number.isFinite(c.time) && c.time > 0))
     return '"time" must be a number of seconds above 0';
+  for (const k of ['image', 'hintImage'] as const)
+    if (c[k] !== undefined && !isImageSource(c[k])) return `"${k}" must be a picture (data:image/… or an https link)`;
   switch (c.type) {
     case 'flashcard':
       if (!isStr(c.front) || !isStr(c.back)) return 'flashcard needs "front" and "back"';

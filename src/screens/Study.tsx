@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AnswerResult, Deck, Grade, Library, StudyItem } from '../types';
 import { buildQueue } from '../lib/library';
 import { VARIANT_LABELS } from '../lib/vocab';
-import { DEFAULT_QUESTION_TIME } from '../lib/quiz';
+import { DEFAULT_QUESTION_TIME, GRADE_LABELS, speedGrade } from '../lib/quiz';
 import { CardView } from '../components/cards/CardView';
 import { Stage } from '../components/Stage';
 
@@ -26,6 +26,8 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
   const [requeued, setRequeued] = useState<Set<string>>(new Set());
   const [round, setRound] = useState(0);
   const [timedOut, setTimedOut] = useState(0);
+  /** Quiz mode: the grade from answer speed, shown after answering. */
+  const [speed, setSpeed] = useState<{ grade: Grade; seconds: number } | null>(null);
   const [questionAt, setQuestionAt] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
 
@@ -38,7 +40,12 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
 
   const answer = (r: AnswerResult) => {
     setResult(r);
-    onRecord(item.key, r.grade);
+    if (limit) {
+      const seconds = (Date.now() - questionAt) / 1000;
+      const grade = speedGrade(r, item.card, seconds, limit);
+      setSpeed({ grade, seconds });
+      onRecord(item.key, grade);
+    } else onRecord(item.key, r.grade);
     setScore((s) => ({ correct: s.correct + (r.correct ? 1 : 0), answered: s.answered + 1 }));
     // In review mode, missed questions come back once at the end of the session.
     if (mode === 'review' && !r.correct && !requeued.has(item.key)) {
@@ -49,6 +56,7 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
 
   const next = () => {
     setResult(null);
+    setSpeed(null);
     setPos((p) => p + 1);
     setQuestionAt(Date.now());
     setNow(Date.now());
@@ -65,6 +73,8 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
     if (questionLeft === null || questionLeft > 0) return;
     setScore((s) => ({ ...s, answered: s.answered + 1 }));
     setTimedOut((n) => n + 1);
+    // Out of time counts like a wrong answer, so the card comes back soon.
+    onRecord(item.key, 'again');
     next();
   });
 
@@ -148,6 +158,11 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
             />
             {result && (
               <div className="next-row">
+                {speed && (
+                  <span className={`speed-grade grade-${speed.grade}`} title="Marked by how quickly you answered">
+                    {GRADE_LABELS[speed.grade]} · {Math.max(1, Math.round(speed.seconds))} s of {limit} s
+                  </span>
+                )}
                 <button type="button" className="primary" autoFocus onClick={next}>
                   Next <kbd>Enter</kbd>
                 </button>

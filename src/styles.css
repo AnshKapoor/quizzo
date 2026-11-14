@@ -271,6 +271,15 @@ kbd {
 .prompt { font-size: 1.3rem; font-weight: 600; }
 .big { font-size: 2rem; font-weight: 700; }
 .hint, .tap-hint { color: var(--muted); font-size: 0.9rem; }
+.card-image { display: block; max-width: 100%; max-height: 280px; margin: 0 auto 0.75rem; border-radius: 8px; object-fit: contain; }
+.hint-image { max-height: 200px; margin-top: 0.5rem; }
+.hint-btn { display: block; margin: 0.75rem auto 0; font-size: 0.9rem; }
+.hint-open { margin-top: 0.75rem; text-align: center; }
+.image-drop { border: 2px dashed var(--border); border-radius: 8px; padding: 0.9rem; text-align: center; color: var(--muted); cursor: pointer; font-size: 0.9rem; }
+.image-drop:focus, .image-drop.over { border-color: var(--accent); color: var(--text); outline: none; }
+.image-preview img { display: block; max-width: 100%; max-height: 180px; border-radius: 8px; border: 1px solid var(--border); }
+.image-preview .row { align-items: center; margin-top: 0.3rem; }
+.hint-group { display: flex; flex-direction: column; gap: inherit; }
 .translation { font-style: italic; }
 .example { color: var(--muted); }
 .explanation { margin: 0; padding: 0.6rem 0.8rem; background: var(--surface-2); border-radius: 8px; font-size: 0.93rem; }
@@ -299,6 +308,8 @@ kbd {
 .grade-again { color: var(--bad); }
 .grade-good, .grade-easy { color: var(--ok); }
 .grade.chosen { outline: 2px solid currentColor; }
+.grade-hard { color: var(--warn); }
+.speed-grade { margin-right: auto; align-self: center; font-weight: 600; font-size: 0.9rem; }
 
 /* mcq */
 .options { display: grid; gap: 0.5rem; }

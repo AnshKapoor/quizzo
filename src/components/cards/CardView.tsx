@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { AnswerResult, StudyCard } from '../../types';
 import { CARD_TYPE_LABELS } from '../../lib/cardForm';
 import { CategorizeView } from './CategorizeView';
@@ -23,12 +24,29 @@ export interface CardViewProps<C extends StudyCard = StudyCard> {
   label?: string;
 }
 
+/** Hint text and / or picture behind a button, so looking at it is the learner's choice. */
+function HintToggle({ text, image }: { text?: string; image?: string }) {
+  const [open, setOpen] = useState(false);
+  if (!text && !image) return null;
+  return open ? (
+    <div className="hint hint-open">
+      {text && <span>💡 {text}</span>}
+      {image && <img className="card-image hint-image" src={image} alt="Hint" />}
+    </div>
+  ) : (
+    <button type="button" className="ghost hint-btn" onClick={() => setOpen(true)}>
+      💡 Show hint
+    </button>
+  );
+}
+
 /** Renders any card type. Give it a `key` per card so its internal state resets. */
 export function CardView(props: CardViewProps) {
   const { card } = props;
   return (
     <div className={`card card-${card.type}`}>
       <div className="card-type">{props.label ?? CARD_TYPE_LABELS[card.type]}</div>
+      {card.image && <img className="card-image" src={card.image} alt="" />}
       {card.type === 'flashcard' && <FlashcardView {...props} card={card} />}
       {card.type === 'mcq' && <McqView {...props} card={card} />}
       {card.type === 'match' && <MatchView {...props} card={card} />}
@@ -39,6 +57,8 @@ export function CardView(props: CardViewProps) {
       {card.type === 'dictation' && <DictationView {...props} card={card} />}
       {card.type === 'sequence' && <SequenceView {...props} card={card} />}
       {card.type === 'table' && <TableView {...props} card={card} />}
+      {/* Flashcards show their hint on the front themselves. */}
+      {card.type !== 'flashcard' && <HintToggle text={card.hint} image={card.hintImage} />}
     </div>
   );
 }

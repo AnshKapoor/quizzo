@@ -18,6 +18,10 @@ interface BaseCard {
   type: CardType;
   tags?: string[];
   hint?: string;
+  /** Picture shown with the question / instruction: a data URL (pasted in the editor) or an https link. */
+  image?: string;
+  /** Picture shown with the hint. */
+  hintImage?: string;
   /** Shown after answering (grammar rule, mnemonic, ...). */
   explanation?: string;
   /** Seconds this question gets in a quiz timed per card. Missing = the default from Settings. Study (review) has no clock. */

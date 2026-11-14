@@ -6,6 +6,8 @@ import { expandCard, VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
 import { CARD_HELP } from '../lib/help';
 import { Help } from './Help';
+import { ImageField } from '../components/ImageField';
+import { imageFromTransfer, imageToDataUrl } from '../lib/image';
 
 interface Props {
   deck: Deck;
@@ -67,6 +69,21 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
     if (isEmpty || confirm('Replace what you have typed with the example?')) setForm(cardToForm(help.example));
   };
 
+  /**
+   * Pasting a picture anywhere in the form adds it: to the hint when pasted in the hint area,
+   * otherwise to the question. Text pastes are left alone.
+   */
+  const pasteImage = (e: React.ClipboardEvent<HTMLFormElement>) => {
+    const file = imageFromTransfer(e.clipboardData);
+    if (!file) return;
+    e.preventDefault();
+    const target = (e.target as HTMLElement).closest('[data-image-target="hint"]') ? 'hintImage' : 'image';
+    imageToDataUrl(file).then(
+      (src) => set(target, src),
+      (err) => alert((err as Error).message),
+    );
+  };
+
   const save = (another: boolean) => {
     if (result.card) {
       onSave(result.card, another);
@@ -91,6 +108,7 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
       <div className="editor-grid">
         <form
           className="editor-form"
+          onPaste={pasteImage}
           onSubmit={(e) => {
             e.preventDefault();
             save(false);
@@ -268,7 +286,21 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
             </>
           )}
 
-          {text('hint', 'Hint (optional)')}
+          <ImageField
+            label="Question picture (optional)"
+            value={form.image}
+            onChange={(v) => set('image', v)}
+            help="Shown with the question or instruction. Tip: paste a picture while typing the question and it lands here."
+          />
+          <div data-image-target="hint" className="hint-group">
+            {text('hint', 'Hint (optional)')}
+            <ImageField
+              label="Hint picture (optional)"
+              value={form.hintImage}
+              onChange={(v) => set('hintImage', v)}
+              help="Shown when the learner presses Show hint (on flashcards: before revealing)."
+            />
+          </div>
           {text('explanation', 'Explanation shown after answering (optional)', { rows: 2 })}
           {text('tags', 'Tags', { placeholder: 'A1, verbs' })}
           <label className="field time-field">

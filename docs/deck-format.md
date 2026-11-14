@@ -31,6 +31,8 @@ and listed after import.
 | `hint`        | no       | shown before answering (flashcards)                  |
 | `explanation` | no       | grammar note shown after answering                   |
 | `tags`        | no       | list of strings                                      |
+| `image`       | no       | picture shown with the question: `data:image/…;base64,…` (what the editor saves) or an `https://` link |
+| `hintImage`   | no       | picture shown with the hint, same format as `image`  |
 | `time`        | no       | seconds in quizzes timed per card; missing = the default from Settings (30) |
 
 ## Card types
