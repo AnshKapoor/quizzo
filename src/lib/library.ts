@@ -15,9 +15,13 @@ export function upsertDeck(lib: Library, deck: Deck): Library {
 const dropProgress = (lib: Library, match: (key: string) => boolean) =>
   Object.fromEntries(Object.entries(lib.progress).filter(([k]) => !match(k)));
 
-export function removeDeck(lib: Library, deckId: string): Library {
+/** Remembers when something was deleted, so merging an older backup doesn't bring it back. */
+const tombstone = (lib: Library, key: string, now: number) => ({ ...lib.deleted, [key]: now });
+
+export function removeDeck(lib: Library, deckId: string, now = Date.now()): Library {
   return {
     ...lib,
+    deleted: tombstone(lib, deckId, now),
     decks: lib.decks.filter((d) => d.id !== deckId),
     progress: dropProgress(lib, (k) => k.startsWith(deckId + ':')),
     attempts: lib.attempts?.filter((a) => a.deckId !== deckId),
@@ -32,7 +36,13 @@ export function resetDeckProgress(lib: Library, deckId: string): Library {
   };
 }
 
-export function saveCard(lib: Library, deckId: string, card: Card): Library {
+export function saveCard(lib: Library, deckId: string, card: Card, now = Date.now()): Library {
+  const old = lib.decks.find((d) => d.id === deckId)?.cards.find((c) => c.id === card.id);
+  const { updatedAt: _a, ...a } = (old ?? {}) as Card;
+  const { updatedAt: _b, ...b } = card;
+  // Only a real change counts as an edit (saving an unchanged card keeps its time).
+  if (old && JSON.stringify(a) === JSON.stringify(b)) card = { ...card, updatedAt: old.updatedAt };
+  else card = { ...card, updatedAt: now };
   return {
     ...lib,
     decks: lib.decks.map((d) => {
@@ -43,10 +53,11 @@ export function saveCard(lib: Library, deckId: string, card: Card): Library {
   };
 }
 
-export function removeCard(lib: Library, deckId: string, cardId: string): Library {
+export function removeCard(lib: Library, deckId: string, cardId: string, now = Date.now()): Library {
   const key = progressKey(deckId, cardId);
   return {
     ...lib,
+    deleted: tombstone(lib, key, now),
     progress: dropProgress(lib, (k) => k === key || k.startsWith(key + '#')),
     decks: lib.decks.map((d) => (d.id === deckId ? { ...d, cards: d.cards.filter((c) => c.id !== cardId) } : d)),
   };

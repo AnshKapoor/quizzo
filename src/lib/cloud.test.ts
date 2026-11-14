@@ -6,10 +6,10 @@ import {
   CloudClient,
   connectionLink,
   fingerprint,
-  mergeMissingDecks,
   parseConnection,
   parseLibraryBackup,
   restoreInto,
+  stampedBackup,
   CloudError,
   setupKey,
   WebPageError,
@@ -184,16 +184,13 @@ describe('restoring', () => {
     expect(next.cloud?.lastHash).toBe(fingerprint(backupPayload(next)));
   });
 
-  it('can add only missing decks, with their progress', () => {
-    const here = lib([deck('a')]);
-    const other = lib([deck('a'), deck('b')]);
-    other.progress['b:c0'] = { reps: 3, lapses: 0, ease: 2.5, interval: 4, due: 9, last: 2 };
-    other.progress['a:c0'] = { reps: 9, lapses: 0, ease: 2.5, interval: 4, due: 9, last: 2 };
-    const { library: next, added } = mergeMissingDecks(here, other);
-    expect(added).toBe(1);
-    expect(next.decks.map((d) => d.id)).toEqual(['a', 'b']);
-    expect(next.progress['b:c0'].reps).toBe(3);
-    expect(next.progress['a:c0'].reps).toBe(1); // own progress untouched
+  it('stamps backups with time and device, without changing the auto-backup fingerprint', () => {
+    const l = lib([deck('a')]);
+    const backup = parseLibraryBackup(stampedBackup(l, 'Phone', 1234)).library!;
+    expect(backup.backedUpAt).toBe(1234);
+    expect(backup.backedUpFrom).toBe('Phone');
+    expect(backupPayload(backup)).toBe(backupPayload(l));
+    expect(restoreInto(l, backup)).not.toHaveProperty('backedUpAt');
   });
 
   it('points deck files to Import and skips broken decks', () => {

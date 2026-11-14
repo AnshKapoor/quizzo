@@ -362,7 +362,11 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
             The Sheet keeps the 20 newest backups.
           </li>
           <li>
-            <b>Restore</b> can replace everything on the device (undo is offered) or only add the decks you don't have.
+            <b>Restore</b> shows when the backup was made (and on which device) next to your last change here. Then
+            choose <b>Merge with this device</b> or <b>Replace everything here</b>; both can be undone. Merge keeps
+            cards from both sides and the latest learning progress. Cards deleted on one side are removed on the
+            other, unless they were edited after the deletion. If a card was changed on both sides, Quizzo shows both
+            versions with their times and you pick which one stays (the newer one is preselected).
           </li>
           <li>
             <b>Backup file</b>: the same backup as a single .json file (desktop and browser).

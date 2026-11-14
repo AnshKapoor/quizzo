@@ -3,6 +3,7 @@ import type { Library } from '../types';
 import {
   appsScript,
   backupPayload,
+  stampedBackup,
   CloudClient,
   type CloudError,
   type CloudBackupInfo,
@@ -10,13 +11,13 @@ import {
   defaultDeviceName,
   fingerprint,
   librarySummary,
-  mergeMissingDecks,
   setupKey as savedSetupKey,
   parseConnection,
   parseLibraryBackup,
   restoreInto,
 } from '../lib/cloud';
 import { downloadJson } from '../lib/storage';
+import { lastChange, mergeLibraries, newer, type Conflict, type Side } from '../lib/merge';
 
 interface Props {
   library: Library;
@@ -60,6 +61,8 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
   const [backups, setBackups] = useState<CloudBackupInfo[] | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [undo, setUndo] = useState<Library | null>(null);
+  /** Conflicts found when merging the pending backup, with the side chosen for each. */
+  const [conflicts, setConflicts] = useState<{ list: Conflict[]; choices: Record<string, Side> } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const summary = librarySummary(library);
@@ -136,20 +139,39 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
       askRestore(`the backup from ${when(b.created)} (${b.device})`, await new CloudClient(cloud!).get(b.id));
     });
 
-  const applyRestore = (mode: 'replace' | 'merge') => {
+  const finish = (text: string) => {
     if (!pending) return;
-    if (mode === 'replace') {
-      setUndo(library);
-      update((l) => restoreInto(l, pending.library));
-      const s = librarySummary(pending.library);
-      setMessage({ kind: 'ok', text: `Restored ${s.decks} deck(s), ${s.cards} card(s), progress, quizzes and appearance.` });
-    } else {
-      const { added } = mergeMissingDecks(library, pending.library);
-      update((l) => mergeMissingDecks(l, pending.library).library);
-      setMessage({ kind: 'ok', text: added ? `Added ${added} deck(s).` : 'You already have every deck in that backup.' });
-    }
-    if (pending.warnings.length) setMessage((m) => m && { ...m, text: `${m.text} ${pending.warnings.join(' ')}` });
+    setMessage({ kind: 'ok', text: [text, ...pending.warnings].join(' ') });
     setPending(null);
+    setConflicts(null);
+  };
+
+  const replaceAll = () => {
+    if (!pending) return;
+    setUndo(library);
+    update((l) => restoreInto(l, pending.library));
+    const s = librarySummary(pending.library);
+    finish(`Restored ${s.decks} deck(s), ${s.cards} card(s), progress, quizzes and appearance.`);
+  };
+
+  /** Merges with the chosen sides; first time round, stops to ask when there are conflicts. */
+  const mergeNow = (choices?: Record<string, Side>) => {
+    if (!pending) return;
+    const pick = (c: Conflict) => choices?.[c.id] ?? newer(c);
+    const result = mergeLibraries(library, pending.library, pick);
+    if (!choices && result.conflicts.length) {
+      setConflicts({ list: result.conflicts, choices: Object.fromEntries(result.conflicts.map((c) => [c.id, newer(c)])) });
+      return;
+    }
+    setUndo(library);
+    update((l) => ({ ...mergeLibraries(l, pending.library, pick).library, cloud: l.cloud }));
+    const parts = [
+      result.added && `${result.added} card(s) added`,
+      result.updated && `${result.updated} updated from the backup`,
+      result.removed && `${result.removed} removed (deleted on the other device)`,
+      result.conflicts.length && `${result.conflicts.length} conflict(s) settled as you chose`,
+    ].filter(Boolean);
+    finish(`Merged. ${parts.length ? parts.join(', ') + '.' : 'Nothing was different.'} Progress and quiz results from both sides are kept.`);
   };
 
   const disconnect = () => {
@@ -201,13 +223,13 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
       )}
       {undo && (
         <div className="notice row wrap">
-          <span>Restore done.</span>
+          <span>Restore / merge done.</span>
           <button
             type="button"
             onClick={() => {
               update((l) => ({ ...undo, cloud: l.cloud }));
               setUndo(null);
-              setMessage({ kind: 'ok', text: 'Undone. Your previous decks are back.' });
+              setMessage({ kind: 'ok', text: 'Undone. Everything is as it was before.' });
             }}
           >
             Undo restore
@@ -215,24 +237,104 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
         </div>
       )}
 
-      {pending && (
+      {pending && !conflicts && (
         <div className="backup-panel restore-choice" role="dialog" aria-label="Restore">
           <strong>Restore {pending.label}?</strong>
           <p className="sub">
             It has {librarySummary(pending.library).decks} deck(s) and {librarySummary(pending.library).cards} card(s).
           </p>
+          <ul className="stamp-list">
+            <li>
+              Backup made: <b>{pending.library.backedUpAt ? when(pending.library.backedUpAt) : 'unknown time (older backup)'}</b>
+              {pending.library.backedUpFrom && <> on {pending.library.backedUpFrom}</>}
+            </li>
+            <li>
+              Last change on this device: <b>{lastChange(library) ? when(lastChange(library)) : 'unknown'}</b>
+            </li>
+          </ul>
           <div className="row wrap">
-            <button type="button" className="primary" onClick={() => applyRestore('replace')}>
-              Replace everything here
+            <button type="button" className="primary" onClick={() => mergeNow()}>
+              Merge with this device
             </button>
-            <button type="button" onClick={() => applyRestore('merge')}>
-              Only add decks I don't have
+            <button type="button" onClick={replaceAll}>
+              Replace everything here
             </button>
             <button type="button" className="ghost" onClick={() => setPending(null)}>
               Cancel
             </button>
           </div>
-          <small className="sub">"Replace" can be undone until you leave this screen.</small>
+          <small className="sub">
+            Merge keeps cards from both sides; if a card was changed on both, you choose which version stays. Both can be
+            undone until you leave this screen.
+          </small>
+        </div>
+      )}
+
+      {pending && conflicts && (
+        <div className="backup-panel restore-choice" role="dialog" aria-label="Merge conflicts">
+          <strong>
+            {conflicts.list.length} card(s) differ between this device and the backup. Which version should stay?
+          </strong>
+          <p className="sub">The newer version is picked for each one. Change any you like, then press Merge.</p>
+          <div className="row wrap">
+            {(['newer', 'mine', 'theirs'] as const).map((all) => (
+              <button
+                key={all}
+                type="button"
+                className="ghost"
+                onClick={() =>
+                  setConflicts({
+                    ...conflicts,
+                    choices: Object.fromEntries(conflicts.list.map((c) => [c.id, all === 'newer' ? newer(c) : all])),
+                  })
+                }
+              >
+                {all === 'newer' ? 'All: newer' : all === 'mine' ? 'All: this device' : 'All: backup'}
+              </button>
+            ))}
+          </div>
+          <ul className="conflict-list">
+            {conflicts.list.map((c) => {
+              const pick = (side: Side) => setConflicts({ ...conflicts, choices: { ...conflicts.choices, [c.id]: side } });
+              const option = (side: Side, text: string | undefined, time: number, gone: string) => (
+                <label className={`conflict-side ${conflicts.choices[c.id] === side ? 'chosen' : ''}`}>
+                  <input type="radio" name={c.id} checked={conflicts.choices[c.id] === side} onChange={() => pick(side)} />
+                  <span>
+                    <small className="sub">
+                      {side === 'mine' ? 'This device' : 'Backup'} · {time ? when(time) : 'time unknown'}
+                      {time && time === Math.max(c.mineAt, c.theirsAt) && c.mineAt !== c.theirsAt ? ' · newer' : ''}
+                    </small>
+                    <span className={text === undefined ? 'sub' : ''}>{text ?? gone}</span>
+                  </span>
+                </label>
+              );
+              return (
+                <li key={c.id}>
+                  <small className="badge">{c.deckTitle}</small>
+                  {option(
+                    'mine',
+                    c.mine,
+                    c.mineAt,
+                    c.kind === 'deleted-here' ? 'Deleted here' : 'Not here',
+                  )}
+                  {option(
+                    'theirs',
+                    c.theirs,
+                    c.theirsAt,
+                    c.kind === 'deck-deleted-there' ? 'Whole deck deleted on the other device' : 'Deleted on the other device',
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <div className="row wrap">
+            <button type="button" className="primary" onClick={() => mergeNow(conflicts.choices)}>
+              Merge
+            </button>
+            <button type="button" className="ghost" onClick={() => setConflicts(null)}>
+              Back
+            </button>
+          </div>
         </div>
       )}
 
@@ -388,7 +490,7 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
           {!isAndroid() && (
             <button
               type="button"
-              onClick={() => downloadJson(`quizzo-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.parse(backupPayload(library)))}
+              onClick={() => downloadJson(`quizzo-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.parse(stampedBackup(library, library.cloud?.device || defaultDeviceName())))}
             >
               ⤓ Save backup file
             </button>

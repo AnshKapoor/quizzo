@@ -275,6 +275,14 @@ kbd {
 .hint-image { max-height: 200px; margin-top: 0.5rem; }
 .hint-btn { display: block; margin: 0.75rem auto 0; font-size: 0.9rem; }
 .hint-open { margin-top: 0.75rem; text-align: center; }
+.stamp-list { margin: 0.2rem 0 0.6rem; padding-left: 1.1rem; font-size: 0.92rem; }
+.conflict-list { list-style: none; padding: 0; margin: 0.6rem 0; display: flex; flex-direction: column; gap: 0.6rem; max-height: 55vh; overflow: auto; }
+.conflict-list > li { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; }
+.conflict-list > li > .badge { grid-column: 1 / -1; justify-self: start; }
+.conflict-side { display: flex; gap: 0.4rem; align-items: flex-start; padding: 0.4rem; border-radius: 6px; cursor: pointer; overflow-wrap: anywhere; }
+.conflict-side > span { display: flex; flex-direction: column; gap: 0.15rem; }
+.conflict-side.chosen { background: var(--surface-2); outline: 2px solid var(--accent); }
+@media (max-width: 560px) { .conflict-list > li { grid-template-columns: 1fr; } }
 .image-drop { border: 2px dashed var(--border); border-radius: 8px; padding: 0.9rem; text-align: center; color: var(--muted); cursor: pointer; font-size: 0.9rem; }
 .image-drop:focus, .image-drop.over { border-color: var(--accent); color: var(--text); outline: none; }
 .image-preview img { display: block; max-width: 100%; max-height: 180px; border-radius: 8px; border: 1px solid var(--border); }

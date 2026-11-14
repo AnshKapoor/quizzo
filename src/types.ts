@@ -24,6 +24,8 @@ interface BaseCard {
   hintImage?: string;
   /** Shown after answering (grammar rule, mnemonic, ...). */
   explanation?: string;
+  /** Epoch ms of the last edit in the card editor. Used to merge backups; missing = unknown (older cards). */
+  updatedAt?: number;
   /** Seconds this question gets in a quiz timed per card. Missing = the default from Settings. Study (review) has no clock. */
   time?: number;
 }
@@ -258,6 +260,14 @@ export interface Library {
   customQuizzes?: CustomQuiz[];
   appearance?: Appearance;
   settings?: Settings;
+  /**
+   * When decks and cards were deleted, keyed `deckId` or `deckId:cardId` (epoch ms), so merging a backup
+   * doesn't bring them back.
+   */
+  deleted?: Record<string, number>;
+  /** Set in backups only: when (epoch ms) and on which device the backup was made. */
+  backedUpAt?: number;
+  backedUpFrom?: string;
   /** This device's Google Sheet backup connection. Left out of backups; kept when restoring. */
   cloud?: CloudSettings;
 }

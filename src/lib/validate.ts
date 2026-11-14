@@ -12,6 +12,8 @@ export function validateCard(c: any): string | null {
   if (!c || typeof c !== 'object') return 'not an object';
   if (c.time !== undefined && !(typeof c.time === 'number' && Number.isFinite(c.time) && c.time > 0))
     return '"time" must be a number of seconds above 0';
+  if (c.updatedAt !== undefined && !(typeof c.updatedAt === 'number' && Number.isFinite(c.updatedAt)))
+    return '"updatedAt" must be a time (epoch milliseconds)';
   for (const k of ['image', 'hintImage'] as const)
     if (c[k] !== undefined && !isImageSource(c[k])) return `"${k}" must be a picture (data:image/… or an https link)`;
   switch (c.type) {

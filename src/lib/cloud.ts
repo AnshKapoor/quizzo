@@ -9,10 +9,15 @@ import { validateDeck } from './validate';
 
 // ---- the library as a backup ----
 
-/** What goes into a backup: everything except this device's cloud settings. */
+/** What goes into a backup: everything except this device's cloud settings. Same text for the same library. */
 export function backupPayload(lib: Library): string {
-  const { cloud: _cloud, ...rest } = lib;
+  const { cloud: _cloud, backedUpAt: _at, backedUpFrom: _from, ...rest } = lib;
   return JSON.stringify(rest);
+}
+
+/** A backup as stored: the payload plus when and on which device it was made. */
+export function stampedBackup(lib: Library, device: string, now = Date.now()): string {
+  return JSON.stringify({ ...JSON.parse(backupPayload(lib)), backedUpAt: now, backedUpFrom: device });
 }
 
 /** Short, stable fingerprint so auto backup can skip uploads when nothing changed. */
@@ -69,21 +74,8 @@ export function parseLibraryBackup(json: string): { library?: Library; errors: s
 /** Replaces this library with a backup, keeping this device's cloud connection. */
 export function restoreInto(current: Library, backup: Library): Library {
   const cloud = current.cloud && { ...current.cloud, lastHash: fingerprint(backupPayload(backup)) };
-  return { ...backup, cloud };
-}
-
-/** Adds the backup's decks that this library doesn't have (by id), with their progress. */
-export function mergeMissingDecks(current: Library, backup: Library): { library: Library; added: number } {
-  const have = new Set(current.decks.map((d) => d.id));
-  const extra = backup.decks.filter((d) => !have.has(d.id));
-  const ids = new Set(extra.map((d) => d.id));
-  const progress = { ...current.progress };
-  for (const [k, v] of Object.entries(backup.progress)) if (ids.has(k.slice(0, k.indexOf(':')))) progress[k] = v;
-  const attempts = [...(current.attempts ?? []), ...(backup.attempts ?? []).filter((a) => ids.has(a.deckId))];
-  return {
-    library: { ...current, decks: [...current.decks, ...extra], progress, attempts },
-    added: extra.length,
-  };
+  const { backedUpAt: _at, backedUpFrom: _from, ...rest } = backup;
+  return { ...rest, cloud };
 }
 
 // ---- connection link ----
@@ -263,7 +255,7 @@ export class CloudClient {
   async save(lib: Library, device: string): Promise<CloudBackupInfo> {
     const s = librarySummary(lib);
     return (
-      await this.call<{ backup: CloudBackupInfo }>({ action: 'save' }, { device, ...s, data: backupPayload(lib) })
+      await this.call<{ backup: CloudBackupInfo }>({ action: 'save' }, { device, ...s, data: stampedBackup(lib, device) })
     ).backup;
   }
 }
