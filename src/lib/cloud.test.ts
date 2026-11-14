@@ -10,6 +10,9 @@ import {
   parseConnection,
   parseLibraryBackup,
   restoreInto,
+  CloudError,
+  setupKey,
+  WebPageError,
 } from './cloud';
 import { emptyLibrary } from './storage';
 import { DEFAULT_APPEARANCE } from './appearance';
@@ -198,5 +201,39 @@ describe('restoring', () => {
     const r = parseLibraryBackup(JSON.stringify({ ...lib([deck('a')]), decks: [deck('a'), { title: 5 }] }));
     expect(r.library!.decks).toHaveLength(1);
     expect(r.errors).toHaveLength(1);
+  });
+});
+
+describe('connect problems', () => {
+  const conn = { url: 'https://script.google.com/macros/s/ABC/exec', key: 'k1' };
+
+  it('accepts school / work (Workspace) links and trailing slashes', () => {
+    expect(parseConnection('https://script.google.com/a/macros/uni.de/s/ABC/exec?key=k1')).toEqual({
+      url: 'https://script.google.com/a/macros/uni.de/s/ABC/exec',
+      key: 'k1',
+    });
+    expect(parseConnection('https://script.google.com/macros/s/ABC/exec/?key=k1')).toEqual(conn);
+    expect(parseConnection('https://script.google.com/home/projects/ABC/edit?key=k1')).toHaveProperty('error');
+  });
+
+  it('explains a Google page (blocked by the browser) instead of saying it could not reach the Sheet', async () => {
+    const client = new CloudClient(conn, async () => {
+      throw new WebPageError('page');
+    });
+    const err = (await client.ping().catch((e) => e)) as CloudError;
+    expect(err.message).toMatch(/web page/);
+    expect(err.message).toMatch(/Who has access: Anyone/);
+    expect(err.testUrl).toBe('https://script.google.com/macros/s/ABC/exec?action=ping&key=k1');
+  });
+
+  it('a real network failure still says so', async () => {
+    const client = new CloudClient(conn, async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    expect((await client.ping().catch((e) => e)).message).toMatch(/Could not reach Google \(Failed to fetch\)/);
+  });
+
+  it('keeps the setup key of a connected device', () => {
+    expect(setupKey('abc')).toBe('abc');
   });
 });

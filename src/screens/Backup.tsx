@@ -4,13 +4,14 @@ import {
   appsScript,
   backupPayload,
   CloudClient,
+  type CloudError,
   type CloudBackupInfo,
   connectionLink,
   defaultDeviceName,
   fingerprint,
   librarySummary,
   mergeMissingDecks,
-  newKey,
+  setupKey as savedSetupKey,
   parseConnection,
   parseLibraryBackup,
   restoreInto,
@@ -52,10 +53,10 @@ async function copy(text: string): Promise<boolean> {
 export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack }: Props) {
   const cloud = library.cloud?.url ? library.cloud : undefined;
   // Key shown in the setup script; saved once the user connects.
-  const [setupKey] = useState(() => library.cloud?.key || newKey());
+  const [setupKey] = useState(() => savedSetupKey(library.cloud?.key));
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string; testUrl?: string } | null>(null);
   const [backups, setBackups] = useState<CloudBackupInfo[] | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [undo, setUndo] = useState<Library | null>(null);
@@ -69,7 +70,7 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
     try {
       await fn();
     } catch (e) {
-      setMessage({ kind: 'error', text: (e as Error).message });
+      setMessage({ kind: 'error', text: (e as Error).message, testUrl: (e as CloudError).testUrl });
     } finally {
       setBusy(null);
     }
@@ -181,7 +182,23 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
       </p>
 
       {busy && <div className="notice">{busy}</div>}
-      {message && <div className={`notice ${message.kind === 'error' ? 'bad' : 'good'}`}>{message.text}</div>}
+      {message && (
+        <div className={`notice ${message.kind === 'error' ? 'bad' : 'good'}`}>
+          {message.text}
+          {message.testUrl && (
+            <>
+              {' '}
+              <a href={message.testUrl} target="_blank" rel="noreferrer">
+                Open test link
+              </a>{' '}
+              <small>
+                (it should show <code>{'{"ok":true,…}'}</code>; a sign-in or error page there is what needs fixing in
+                Apps Script).
+              </small>
+            </>
+          )}
+        </div>
+      )}
       {undo && (
         <div className="notice row wrap">
           <span>Restore done.</span>

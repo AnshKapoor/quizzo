@@ -112,18 +112,44 @@ export function parseConnection(text: string, fallbackKey?: string): { url: stri
   } catch {
     return { error: 'That is not a link. Paste the whole web app URL, starting with https://' };
   }
-  if (u.hostname !== SCRIPT_HOST || !u.pathname.startsWith('/macros/')) {
+  // Google Workspace (school / work) accounts get links like /a/macros/<domain>/s/…/exec.
+  const path = u.pathname.replace(/\/+$/, '');
+  if (u.hostname !== SCRIPT_HOST || !/^\/(a\/macros\/[^/]+|macros)\/s\//.test(path)) {
     return {
       error:
         'This is not a web app link. In Apps Script use Deploy → New deployment → Web app, then copy the "Web app" URL (it starts with https://script.google.com/macros/). The Sheet\'s own address does not work.',
     };
   }
-  if (u.pathname.endsWith('/dev')) {
+  if (path.endsWith('/dev')) {
     return { error: 'This is the test (/dev) URL. Copy the "Web app" URL from Deploy → Manage deployments (it ends in /exec).' };
   }
   const key = u.searchParams.get('key') ?? fallbackKey;
   if (!key) return { error: 'This link has no key. Copy the full connection link from your other device or from the Quizzo tab in your Sheet.' };
-  return { url: `${u.origin}${u.pathname}`, key };
+  return { url: `${u.origin}${path}`, key };
+}
+
+/** The ping request as a link: opened in a browser tab it shows exactly what Google answers. */
+export function testLink(conn: { url: string; key: string }): string {
+  return `${conn.url}?${new URLSearchParams({ action: 'ping', key: conn.key })}`;
+}
+
+const KEY_STORE = 'quizzo.cloud.setupKey';
+
+/**
+ * The key put into the setup script. Kept on this device until it connects, so leaving the Backup
+ * screen (e.g. to deploy the script) doesn't change it and make the Sheet answer "Wrong key".
+ */
+export function setupKey(saved?: string): string {
+  if (saved) return saved;
+  try {
+    const stored = localStorage.getItem(KEY_STORE);
+    if (stored && /^[0-9a-f]{24}$/.test(stored)) return stored;
+    const key = newKey();
+    localStorage.setItem(KEY_STORE, key);
+    return key;
+  } catch {
+    return newKey();
+  }
 }
 
 // ---- talking to the web app ----
@@ -139,20 +165,48 @@ export interface CloudBackupInfo {
 
 type Http = (url: string, init: { method: 'GET' | 'POST'; body?: string }) => Promise<{ status: number; text: string }>;
 
+/** Google answered, but with one of its own pages (sign-in, error, not found) that the browser won't show us. */
+export class WebPageError extends Error {}
+
 /** Desktop goes through the main process (no CORS involved); browser and Android use fetch. */
 const defaultHttp: Http = async (url, init) => {
   if (window.quizzoNative?.http) return window.quizzoNative.http(url, init);
-  const res = await fetch(url, {
-    method: init.method,
-    body: init.body,
-    // text/plain keeps this a "simple" request, so the browser sends no preflight Apps Script can't answer.
-    headers: init.body ? { 'Content-Type': 'text/plain;charset=utf-8' } : undefined,
-    redirect: 'follow',
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: init.method,
+      body: init.body,
+      // text/plain keeps this a "simple" request, so the browser sends no preflight Apps Script can't answer.
+      headers: init.body ? { 'Content-Type': 'text/plain;charset=utf-8' } : undefined,
+      redirect: 'follow',
+    });
+  } catch (e) {
+    // Google's own pages carry no CORS header, so the browser hides them and fetch fails as if offline.
+    // A no-cors request still goes through when Google is reachable: then it's the deployment, not the network.
+    const reachable = await fetch(url, { mode: 'no-cors', redirect: 'follow' }).then(
+      () => true,
+      () => false,
+    );
+    if (reachable) throw new WebPageError('Google answered with a web page');
+    throw e;
+  }
   return { status: res.status, text: await res.text() };
 };
 
-export class CloudError extends Error {}
+const WEB_PAGE_HELP =
+  'Google answered with a web page instead of Quizzo data, so the web app is not set up the way Quizzo needs. ' +
+  'Press "Open test link" to see that page. Usually this fixes it: in Apps Script open Deploy → Manage deployments → ✎ Edit, ' +
+  'set "Execute as: Me" and "Who has access: Anyone" (not "Anyone with Google account"), pick Version: New version and press Deploy. ' +
+  'If Google asks for access, allow it. Then copy the Web app URL shown there (it ends in /exec) and paste it here again.';
+
+export class CloudError extends Error {
+  /** A link that shows what Google answers, to help find setup problems. */
+  testUrl?: string;
+  constructor(message: string, testUrl?: string) {
+    super(message);
+    this.testUrl = testUrl;
+  }
+}
 
 export class CloudClient {
   constructor(
@@ -166,8 +220,10 @@ export class CloudClient {
     try {
       res = await this.http(`${this.conn.url}?${q}`, body ? { method: 'POST', body: JSON.stringify(body) } : { method: 'GET' });
     } catch (e) {
+      if (e instanceof WebPageError) throw new CloudError(WEB_PAGE_HELP, testLink(this.conn));
       throw new CloudError(
-        `Could not reach the Sheet (${(e as Error).message || 'network error'}). Check the internet connection, and that the web app is deployed with "Who has access: Anyone".`,
+        `Could not reach Google (${(e as Error).message || 'network error'}). Check the internet connection, and that no ad blocker or network filter blocks script.google.com.`,
+        testLink(this.conn),
       );
     }
     let data: any;
@@ -177,7 +233,8 @@ export class CloudClient {
       throw new CloudError(
         res.status === 404
           ? 'The web app was not found. Was the deployment deleted? Deploy again and paste the new link.'
-          : 'The Sheet answered with a web page instead of data. In Apps Script, check Deploy → Manage deployments: "Execute as: Me" and "Who has access: Anyone".',
+          : WEB_PAGE_HELP,
+        testLink(this.conn),
       );
     }
     if (!data?.ok) {
