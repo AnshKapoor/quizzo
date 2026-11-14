@@ -15,6 +15,7 @@ import {
   customQuizItems,
   deckQuizItems,
   newCustomQuiz,
+  defaultQuestionTime,
   quizAttempts,
   removeCustomQuiz,
   upsertCustomQuiz,
@@ -138,6 +139,8 @@ export default function App() {
       <Appearance
         value={appearance}
         onChange={(change) => update((l) => ({ ...l, appearance: { ...normalizeAppearance(l.appearance), ...change } }))}
+        questionTime={defaultQuestionTime(lib)}
+        onQuestionTime={(questionTime) => update((l) => ({ ...l, settings: { ...l.settings, questionTime } }))}
         onBack={() => setView(view.from)}
       />
     );
@@ -166,6 +169,7 @@ export default function App() {
         history={quizAttempts(lib, CUSTOM_QUIZ_OWNER, quiz.id)}
         backLabel="Home"
         ownerId={CUSTOM_QUIZ_OWNER}
+        defaultTime={defaultQuestionTime(lib)}
         onRecord={recordAnswer}
         onFinish={(attempt) => update((l) => addAttempt(l, attempt))}
         onExit={home}
@@ -244,6 +248,7 @@ export default function App() {
         deck={deck}
         library={lib}
         mode={view.mode}
+        defaultTime={defaultQuestionTime(lib)}
         onRecord={(cardId, grade) => update((l) => L.recordAnswer(l, deck.id, cardId, grade))}
         onExit={() => setView({ name: 'deck', deckId: deck.id })}
       />
@@ -259,6 +264,7 @@ export default function App() {
         history={quizAttempts(lib, deck.id, quiz.id)}
         backLabel={deck.title}
         ownerId={deck.id}
+        defaultTime={defaultQuestionTime(lib)}
         onRecord={recordAnswer}
         onFinish={(attempt) => update((l) => addAttempt(l, attempt))}
         onExit={back}
@@ -279,6 +285,7 @@ export default function App() {
         deck={deck}
         card={deck.cards.find((c) => c.id === view.cardId)}
         type={view.type}
+        defaultTime={defaultQuestionTime(lib)}
         onCancel={back}
         onSave={(card, another) => {
           update((l) => L.saveCard(l, deck.id, card));

@@ -9,6 +9,8 @@ const isStrArr = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) 
 /** Returns an error message, or null when the card is valid. */
 export function validateCard(c: any): string | null {
   if (!c || typeof c !== 'object') return 'not an object';
+  if (c.time !== undefined && !(typeof c.time === 'number' && Number.isFinite(c.time) && c.time > 0))
+    return '"time" must be a number of seconds above 0';
   switch (c.type) {
     case 'flashcard':
       if (!isStr(c.front) || !isStr(c.back)) return 'flashcard needs "front" and "back"';
@@ -130,6 +132,7 @@ function validateQuizzes(raw: unknown, errors: string[]): QuizPreset[] | undefin
       questions: count(q.questions),
       timeLimit: count(q.timeLimit),
       perQuestion: count(q.perQuestion),
+      ...(q.cardTimes === true ? { cardTimes: true } : {}),
       ...(types.length ? { types } : {}),
       ...(tags.length ? { tags } : {}),
     });

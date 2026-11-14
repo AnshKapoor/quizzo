@@ -9,6 +9,9 @@ interface Props {
   value: AppearanceSettings;
   /** Only the changed settings; merged into the saved ones. */
   onChange: (change: Partial<AppearanceSettings>) => void;
+  /** Default seconds per question in quizzes timed per card. */
+  questionTime: number;
+  onQuestionTime: (seconds: number) => void;
   onBack: () => void;
 }
 
@@ -44,8 +47,37 @@ function Choice<T extends string>({
   );
 }
 
-/** Theme, font, text size, card style and where questions sit. Changes apply immediately. */
-export function Appearance({ value, onChange, onBack }: Props) {
+/** Default time for quiz questions; kept as typed so the field can be emptied while editing. */
+function QuestionTime({ value, onChange }: { value: number; onChange: (seconds: number) => void }) {
+  const [text, setText] = useState(String(value));
+  const commit = (s: string) => {
+    const n = Math.round(Number(s.replace(',', '.')));
+    if (n > 0 && n <= 3600) onChange(n);
+  };
+  return (
+    <label className="field">
+      <span>Default time per question (seconds)</span>
+      <input
+        type="number"
+        min={1}
+        max={3600}
+        inputMode="numeric"
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          commit(e.target.value);
+        }}
+        onBlur={() => setText(String(value))}
+      />
+      <small>
+        Used in the deck Quiz and in timed quizzes set to each card's own time, for cards that don't set their own time. Study (review) has no clock.
+      </small>
+    </label>
+  );
+}
+
+/** Quiz timing, plus theme, font, text size, card style and where questions sit. Changes apply immediately. */
+export function Appearance({ value, onChange, questionTime, onQuestionTime, onBack }: Props) {
   const set = <K extends keyof AppearanceSettings>(k: K, v: AppearanceSettings[K]) => onChange({ [k]: v } as Partial<AppearanceSettings>);
   const [round, setRound] = useState(0);
   const layout = LAYOUTS.find((l) => l.id === value.layout)!;
@@ -56,19 +88,23 @@ export function Appearance({ value, onChange, onBack }: Props) {
         <button type="button" className="ghost" onClick={onBack}>
           ← Back
         </button>
-        <strong>Appearance</strong>
+        <strong>Settings</strong>
         <button
           type="button"
           className="ghost"
+          title="Reset the appearance settings"
           disabled={JSON.stringify(value) === JSON.stringify(DEFAULT_APPEARANCE)}
           onClick={() => onChange(DEFAULT_APPEARANCE)}
         >
-          Reset
+          Reset look
         </button>
       </header>
 
       <div className="appearance-grid">
         <div className="appearance-options">
+          <h3 className="settings-heading">Quizzes</h3>
+          <QuestionTime value={questionTime} onChange={onQuestionTime} />
+          <h3 className="settings-heading">Appearance</h3>
           <div className="field">
             <span>Theme</span>
             <div className="theme-grid" role="radiogroup" aria-label="Theme">
@@ -103,7 +139,7 @@ export function Appearance({ value, onChange, onBack }: Props) {
             <span className="sub">Preview — try it</span>
             <span className="spacer" />
             <button type="button" className="ghost" onClick={() => setRound((r) => r + 1)}>
-              ↺ Reset
+              ↺ Reset look
             </button>
           </div>
           <div className="layout-preview">

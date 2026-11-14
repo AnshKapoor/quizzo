@@ -20,6 +20,8 @@ interface BaseCard {
   hint?: string;
   /** Shown after answering (grammar rule, mnemonic, ...). */
   explanation?: string;
+  /** Seconds this question gets in a quiz timed per card. Missing = the default from Settings. Study (review) has no clock. */
+  time?: number;
 }
 
 /** Classic two-sided card, self-graded. */
@@ -174,8 +176,10 @@ export interface QuizPreset {
   questions: number;
   /** Time for the whole quiz in seconds. 0 = no overall limit. */
   timeLimit: number;
-  /** Seconds per question; when it runs out the question counts as missed. 0 = no limit. */
+  /** Seconds per question (same for all); when it runs out the question counts as missed. 0 = no limit. */
   perQuestion: number;
+  /** Each question gets its card's own `time` (or the default from Settings) instead of `perQuestion`. */
+  cardTimes?: boolean;
   /** Only use these card types (empty / missing = all). */
   types?: CardType[];
   /** Only use cards with at least one of these tags (empty / missing = all). */
@@ -249,8 +253,15 @@ export interface Library {
   /** Quizzes with hand-picked questions from any deck. */
   customQuizzes?: CustomQuiz[];
   appearance?: Appearance;
+  settings?: Settings;
   /** This device's Google Sheet backup connection. Left out of backups; kept when restoring. */
   cloud?: CloudSettings;
+}
+
+/** App-wide preferences (besides appearance). Stored with the library so a backup restores them. */
+export interface Settings {
+  /** Seconds per question in quizzes timed per card, for cards that don't set their own `time`. */
+  questionTime: number;
 }
 
 export interface CloudSettings {

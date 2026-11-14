@@ -170,6 +170,11 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
           <li>
             <b>Tags</b>: comma separated, e.g. <code>A1, verbs</code>. Timed quizzes can be limited to certain tags.
           </li>
+          <li>
+            <b>Time in quizzes</b>: how many seconds this question gets in a timed quiz. Leave it empty to use the
+            default (30 seconds, changeable in <b>⚙ Settings</b>). <b>Study</b> has no clock, so you can take your time
+            there.
+          </li>
         </ul>
       </section>
 
@@ -218,7 +223,7 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
             end.
           </li>
           <li>
-            <b>Quiz</b>: 10 random cards from the deck with a score at the end.
+            <b>Quiz</b>: 10 random cards from the deck with a score at the end. Each question has a clock (its card's time, or the default from Settings); when it runs out, the question counts as missed.
           </li>
           <li>
             <b>Timed quizzes</b>: tests with a clock; see below.
@@ -239,8 +244,9 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
             Choose a name and the number of questions (leave empty for all cards).
           </li>
           <li>
-            Set a <b>time limit</b> for the whole quiz in minutes, <b>seconds per question</b>, or both. Leave one
-            empty for no limit.
+            Choose the <b>time per question</b>: <i>Each card's own time</i> (the default: every card's time, or 30
+            seconds if it has none), <i>Same for every question</i>, or <i>No limit</i>. You can also set a{' '}
+            <b>time limit</b> for the whole quiz in minutes; leave it empty for none.
           </li>
           <li>
             Optionally pick <b>card types</b> or <b>tags</b> to test only part of the deck. The line underneath shows
@@ -251,7 +257,8 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
           </li>
         </ol>
         <p>
-          When the clock reaches 0:00 the quiz ends; unanswered questions count as wrong. At the end you see your
+          When a question's clock runs out it counts as missed and the next one starts. When the quiz clock reaches
+          0:00 the quiz ends; unanswered questions count as wrong. At the end you see your
           score, your time and a review of every question. Your recent results are saved. Timed quizzes are saved in
           the deck, so they are included when you export and share it.
         </p>
@@ -284,7 +291,7 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
       <section id="help-appearance" className="help-section">
         <h2>Themes &amp; layout</h2>
         <p>
-          Press <b>🎨 Appearance</b> on the start screen. Changes apply straight away and the preview shows a real
+          Press <b>⚙ Settings</b> on the start screen. Changes apply straight away and the preview shows a real
           question you can try.
         </p>
         <ul>

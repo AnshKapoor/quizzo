@@ -42,7 +42,7 @@ export function Home(p: Props) {
             ☁ Backup
           </button>
           <button type="button" className="ghost" onClick={p.onAppearance}>
-            🎨 Appearance
+            ⚙ Settings
           </button>
           <button type="button" className="ghost" onClick={() => onHelp()}>
             ? Help

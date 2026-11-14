@@ -13,12 +13,28 @@ export interface QuizItem extends StudyItem {
   lang: string;
 }
 
+/** Seconds per question when a card doesn't set its own time and Settings haven't changed it. */
+export const DEFAULT_QUESTION_TIME = 30;
+
+/** The default time per question from Settings. */
+export function defaultQuestionTime(lib: Library): number {
+  const t = lib.settings?.questionTime;
+  return typeof t === 'number' && Number.isFinite(t) && t > 0 ? Math.round(t) : DEFAULT_QUESTION_TIME;
+}
+
+/** Seconds the question gets in this quiz; 0 = no limit. */
+export function questionLimit(quiz: QuizPreset, item: StudyItem, defaultTime: number): number {
+  if (quiz.cardTimes) return item.card.time && item.card.time > 0 ? item.card.time : defaultTime;
+  return quiz.perQuestion;
+}
+
+// New quizzes give every question its card's own time.
 export function newQuizPreset(): QuizPreset {
-  return { id: uid('q-'), title: 'Test', questions: 10, timeLimit: 10 * 60, perQuestion: 0 };
+  return { id: uid('q-'), title: 'Test', questions: 10, timeLimit: 0, perQuestion: 0, cardTimes: true };
 }
 
 export function newCustomQuiz(): CustomQuiz {
-  return { id: uid('cq-'), title: 'My quiz', questions: 0, timeLimit: 10 * 60, perQuestion: 0, picks: [] };
+  return { id: uid('cq-'), title: 'My quiz', questions: 0, timeLimit: 0, perQuestion: 0, cardTimes: true, picks: [] };
 }
 
 /** All questions a deck quiz can draw from, after its type and tag filters. */
@@ -125,7 +141,8 @@ export function quizSummary(quiz: QuizPreset, available: number): string {
   const n = quiz.questions > 0 ? Math.min(quiz.questions, available) : available;
   const parts = [`${n} question${n === 1 ? '' : 's'}`];
   if (quiz.timeLimit) parts.push(quiz.timeLimit % 60 ? formatTime(quiz.timeLimit) : `${quiz.timeLimit / 60} min`);
-  if (quiz.perQuestion) parts.push(`${quiz.perQuestion} s each`);
-  if (!quiz.timeLimit && !quiz.perQuestion) parts.push('no time limit');
+  if (quiz.cardTimes) parts.push('time per card');
+  else if (quiz.perQuestion) parts.push(`${quiz.perQuestion} s each`);
+  if (!quiz.timeLimit && !quiz.perQuestion && !quiz.cardTimes) parts.push('no time limit');
   return parts.join(' · ');
 }

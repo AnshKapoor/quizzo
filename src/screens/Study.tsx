@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AnswerResult, Deck, Grade, Library, StudyItem } from '../types';
 import { buildQueue } from '../lib/library';
 import { VARIANT_LABELS } from '../lib/vocab';
+import { DEFAULT_QUESTION_TIME } from '../lib/quiz';
 import { CardView } from '../components/cards/CardView';
 import { Stage } from '../components/Stage';
 
@@ -9,12 +10,14 @@ interface Props {
   deck: Deck;
   library: Library;
   mode: 'review' | 'quiz';
+  /** Quiz mode: seconds per question for cards without their own time. Review has no clock. */
+  defaultTime?: number;
   /** `itemKey` is the card id, or `cardId#variant` for generated vocabulary questions. */
   onRecord: (itemKey: string, grade: Grade) => void;
   onExit: () => void;
 }
 
-export function Study({ deck, library, mode, onRecord, onExit }: Props) {
+export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME, onRecord, onExit }: Props) {
   // Snapshot the queue once; recording answers must not reshuffle it mid-session.
   const [queue, setQueue] = useState<StudyItem[]>(() => buildQueue(deck, library, mode));
   const [pos, setPos] = useState(0);
@@ -22,9 +25,16 @@ export function Study({ deck, library, mode, onRecord, onExit }: Props) {
   const [score, setScore] = useState({ correct: 0, answered: 0 });
   const [requeued, setRequeued] = useState<Set<string>>(new Set());
   const [round, setRound] = useState(0);
+  const [timedOut, setTimedOut] = useState(0);
+  const [questionAt, setQuestionAt] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   const item = queue[pos];
   const finished = pos >= queue.length;
+
+  // Quiz mode: every question has its own clock (the card's time, or the default from Settings).
+  const limit = mode === 'quiz' && item && !finished ? (item.card.time && item.card.time > 0 ? item.card.time : defaultTime) : 0;
+  const questionLeft = limit && !result ? (questionAt + limit * 1000 - now) / 1000 : null;
 
   const answer = (r: AnswerResult) => {
     setResult(r);
@@ -40,7 +50,23 @@ export function Study({ deck, library, mode, onRecord, onExit }: Props) {
   const next = () => {
     setResult(null);
     setPos((p) => p + 1);
+    setQuestionAt(Date.now());
+    setNow(Date.now());
   };
+
+  useEffect(() => {
+    if (!limit || result) return;
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [limit, result, pos, round]);
+
+  // Out of time: the question counts as missed and the next one starts.
+  useEffect(() => {
+    if (questionLeft === null || questionLeft > 0) return;
+    setScore((s) => ({ ...s, answered: s.answered + 1 }));
+    setTimedOut((n) => n + 1);
+    next();
+  });
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -59,7 +85,10 @@ export function Study({ deck, library, mode, onRecord, onExit }: Props) {
     setResult(null);
     setScore({ correct: 0, answered: 0 });
     setRequeued(new Set());
+    setTimedOut(0);
     setRound((r) => r + 1);
+    setQuestionAt(Date.now());
+    setNow(Date.now());
   };
 
   return (
@@ -68,7 +97,7 @@ export function Study({ deck, library, mode, onRecord, onExit }: Props) {
         <button type="button" className="ghost" onClick={onExit}>
           ← {deck.title}
         </button>
-        <span className="mode-pill">{mode === 'review' ? 'Review' : 'Quiz'}</span>
+        <span className="mode-pill">{mode === 'review' ? 'Review' : '⏱ Quiz'}</span>
         <span className="counter">{Math.min(pos + 1, queue.length)} / {queue.length}</span>
       </header>
       <div className="progress">
@@ -91,6 +120,7 @@ export function Study({ deck, library, mode, onRecord, onExit }: Props) {
               {score.correct} / {score.answered} correct
               {score.answered > 0 && <> · {Math.round((score.correct / score.answered) * 100)}%</>}
             </p>
+            {timedOut > 0 && <p className="sub">⏱ {timedOut} ran out of time</p>}
             <div className="row">
               <button type="button" className="primary" onClick={restart}>
                 {mode === 'quiz' ? 'New quiz' : 'Continue'}
@@ -102,6 +132,12 @@ export function Study({ deck, library, mode, onRecord, onExit }: Props) {
           </div>
         ) : (
           <>
+            {questionLeft !== null && (
+              <div className={`question-clock ${questionLeft <= Math.min(30, limit / 4) ? 'low' : ''}`}>
+                <div style={{ width: `${Math.max(0, questionLeft / limit) * 100}%` }} />
+                <span>{Math.max(0, Math.ceil(questionLeft))} s</span>
+              </div>
+            )}
             <CardView
               key={`${round}-${pos}-${item.key}`}
               card={item.card}

@@ -31,6 +31,7 @@ and listed after import.
 | `hint`        | no       | shown before answering (flashcards)                  |
 | `explanation` | no       | grammar note shown after answering                   |
 | `tags`        | no       | list of strings                                      |
+| `time`        | no       | seconds in quizzes timed per card; missing = the default from Settings (30) |
 
 ## Card types
 
@@ -141,14 +142,16 @@ a deck together with its tests. Each run draws a fresh random set of questions.
 | `title`       | name shown in the app                                                     |
 | `questions`   | how many questions to draw; `0` = all matching questions                  |
 | `timeLimit`   | seconds for the whole quiz; `0` = no overall limit. At 0:00 the quiz ends |
-| `perQuestion` | seconds per question; `0` = no limit. When it runs out the question counts as missed |
+| `perQuestion` | seconds per question, same for all; `0` = no limit. When it runs out the question counts as missed |
+| `cardTimes`   | optional `true`: each question gets its card's own `time` (or the default) instead of `perQuestion` |
 | `types`       | optional: only these card types (a `vocab` entry counts as `vocab`)       |
 | `tags`        | optional: only cards with at least one of these tags                      |
 
 ```json
 "quizzes": [
   { "id": "q-a1-test", "title": "A1 quick test", "questions": 10, "timeLimit": 300, "perQuestion": 0 },
-  { "id": "q-verbs", "title": "Speed round: verbs", "questions": 8, "timeLimit": 0, "perQuestion": 30, "tags": ["verbs"] }
+  { "id": "q-verbs", "title": "Speed round: verbs", "questions": 8, "timeLimit": 0, "perQuestion": 30, "tags": ["verbs"] },
+  { "id": "q-cards", "title": "Card times", "questions": 0, "timeLimit": 0, "perQuestion": 0, "cardTimes": true }
 ]
 ```
 

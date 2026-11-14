@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AnswerResult, Grade, QuizAttempt, QuizPreset } from '../types';
 import { CARD_TYPE_LABELS, cardSummary } from '../lib/cardForm';
-import { buildQuizQueue, CUSTOM_QUIZ_OWNER, formatTime, percent, quizSummary, type QuizItem } from '../lib/quiz';
+import { buildQuizQueue, CUSTOM_QUIZ_OWNER, formatTime, percent, questionLimit, quizSummary, type QuizItem } from '../lib/quiz';
 import { VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
 import { Stage } from '../components/Stage';
@@ -16,6 +16,8 @@ interface Props {
   backLabel: string;
   /** `deckId` stored with the result (the deck, or CUSTOM_QUIZ_OWNER). */
   ownerId: string;
+  /** Seconds per question for cards without their own time, when the quiz is timed per card. */
+  defaultTime: number;
   onRecord: (deckId: string, itemKey: string, grade: Grade) => void;
   onFinish: (attempt: QuizAttempt) => void;
   onExit: () => void;
@@ -32,7 +34,7 @@ const OUTCOME_TEXT: Record<Outcome, string> = {
   unanswered: 'Not answered',
 };
 
-export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, onRecord, onFinish, onExit }: Props) {
+export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime, onRecord, onFinish, onExit }: Props) {
   const [phase, setPhase] = useState<'ready' | 'running' | 'done'>('ready');
   const [queue, setQueue] = useState<QuizItem[]>([]);
   const [pos, setPos] = useState(0);
@@ -53,7 +55,9 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, onRecord, o
   );
 
   const totalLeft = quiz.timeLimit ? (startedAt + quiz.timeLimit * 1000 - now) / 1000 : null;
-  const questionLeft = quiz.perQuestion && !result ? (questionAt + quiz.perQuestion * 1000 - now) / 1000 : null;
+  // Each question's own clock: its card's time, the same for all, or none.
+  const limit = phase === 'running' && queue[pos] ? questionLimit(quiz, queue[pos], defaultTime) : 0;
+  const questionLeft = limit && !result ? (questionAt + limit * 1000 - now) / 1000 : null;
 
   const start = () => {
     const q = buildQuizQueue(pool, quiz);
@@ -177,7 +181,14 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, onRecord, o
             ) : (
               <ul className="rules">
                 {quiz.timeLimit > 0 && <li>The quiz ends when the clock reaches 0:00.</li>}
-                {quiz.perQuestion > 0 && <li>Each question has {quiz.perQuestion} seconds; after that it counts as missed.</li>}
+                {quiz.cardTimes ? (
+                  <li>
+                    Each question has its own time ({defaultTime} seconds unless the card sets another); after that it
+                    counts as missed.
+                  </li>
+                ) : (
+                  quiz.perQuestion > 0 && <li>Each question has {quiz.perQuestion} seconds; after that it counts as missed.</li>
+                )}
                 <li>Questions you don't answer count as wrong.</li>
               </ul>
             )}
@@ -201,8 +212,8 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, onRecord, o
         {phase === 'running' && item && (
           <>
             {questionLeft !== null && (
-              <div className={`question-clock ${low(questionLeft, quiz.perQuestion) ? 'low' : ''}`}>
-                <div style={{ width: `${Math.max(0, questionLeft / quiz.perQuestion) * 100}%` }} />
+              <div className={`question-clock ${low(questionLeft, limit) ? 'low' : ''}`}>
+                <div style={{ width: `${Math.max(0, questionLeft / limit) * 100}%` }} />
                 <span>{Math.max(0, Math.ceil(questionLeft))} s</span>
               </div>
             )}

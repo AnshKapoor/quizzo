@@ -38,6 +38,8 @@ export interface CardForm {
   explanation: string;
   /** Comma separated. */
   tags: string;
+  /** Seconds in quizzes timed per card; empty = the default from Settings. */
+  time: string;
 }
 
 export const CARD_TYPE_LABELS: Record<CardType, string> = {
@@ -81,6 +83,7 @@ export function emptyForm(type: CardType): CardForm {
     hint: '',
     explanation: '',
     tags: '',
+    time: '',
   };
 }
 
@@ -89,6 +92,7 @@ export function cardToForm(card: Card): CardForm {
   f.hint = card.hint ?? '';
   f.explanation = card.explanation ?? '';
   f.tags = (card.tags ?? []).join(', ');
+  f.time = card.time ? String(card.time) : '';
   switch (card.type) {
     case 'flashcard':
       Object.assign(f, { front: card.front, back: card.back, example: card.example ?? '' });
@@ -155,7 +159,15 @@ const opt = (s: string) => (s.trim() ? s.trim() : undefined);
 
 export function formToCard(f: CardForm, id: string): { card?: Card; error?: string } {
   const tags = list(f.tags);
-  const base = { id, hint: opt(f.hint), explanation: opt(f.explanation), tags: tags.length ? tags : undefined };
+  const seconds = Math.round(Number(f.time.trim().replace(',', '.')));
+  if (f.time.trim() && !(seconds > 0)) return { error: 'Time in quizzes must be a number of seconds (or empty for the default)' };
+  const base = {
+    id,
+    hint: opt(f.hint),
+    explanation: opt(f.explanation),
+    tags: tags.length ? tags : undefined,
+    time: f.time.trim() ? seconds : undefined,
+  };
 
   let card: Card;
   switch (f.type) {

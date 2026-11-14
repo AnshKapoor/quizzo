@@ -599,6 +599,8 @@ kbd {
 .appearance-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1.5rem; align-items: start; }
 .appearance-options { display: flex; flex-direction: column; gap: 1rem; }
 .appearance-options .field > span { margin-bottom: 0.2rem; }
+.settings-heading { margin: 0.4rem 0 -0.4rem; font-size: 1rem; color: var(--muted, inherit); text-transform: uppercase; letter-spacing: 0.05em; }
+.settings-heading:first-child { margin-top: 0; }
 .layout-note { margin-top: -0.6rem; }
 .segmented { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 0.5rem; }

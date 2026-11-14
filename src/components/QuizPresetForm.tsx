@@ -20,6 +20,8 @@ export interface QuizBasics {
   title: string;
   questions: string;
   minutes: string;
+  /** card = each card's own time, fixed = `perQuestion` seconds for every question, none = no per-question clock. */
+  perMode: 'card' | 'fixed' | 'none';
   perQuestion: string;
 }
 
@@ -27,6 +29,7 @@ export const basicsFromQuiz = (q: QuizPreset): QuizBasics => ({
   title: q.title,
   questions: String(q.questions || ''),
   minutes: q.timeLimit ? String(+(q.timeLimit / 60).toFixed(2)) : '',
+  perMode: q.cardTimes ? 'card' : q.perQuestion ? 'fixed' : 'none',
   perQuestion: q.perQuestion ? String(q.perQuestion) : '',
 });
 
@@ -34,7 +37,8 @@ export const basicsToQuiz = (b: QuizBasics, fallbackTitle = 'Test') => ({
   title: b.title.trim() || fallbackTitle,
   questions: Math.round(num(b.questions)),
   timeLimit: Math.round(num(b.minutes) * 60),
-  perQuestion: Math.round(num(b.perQuestion)),
+  perQuestion: b.perMode === 'fixed' ? Math.round(num(b.perQuestion)) : 0,
+  cardTimes: b.perMode === 'card' ? true : undefined,
 });
 
 /** The name / questions / time fields shared by deck quizzes and custom quizzes. */
@@ -72,17 +76,32 @@ export function QuizBasicsFields({
           />
         </label>
         <label className="field">
-          <span>Seconds per question</span>
-          <input
-            type="number"
-            min={0}
-            inputMode="numeric"
-            value={value.perQuestion}
-            placeholder="none"
-            onChange={set('perQuestion')}
-          />
+          <span>Time per question</span>
+          <select value={value.perMode} onChange={set('perMode')}>
+            <option value="card">Each card's own time</option>
+            <option value="fixed">Same for every question</option>
+            <option value="none">No limit</option>
+          </select>
         </label>
+        {value.perMode === 'fixed' && (
+          <label className="field">
+            <span>Seconds per question</span>
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={value.perQuestion}
+              placeholder="30"
+              onChange={set('perQuestion')}
+            />
+          </label>
+        )}
       </div>
+      {value.perMode === 'card' && (
+        <small className="sub">
+          Each question gets the time set on its card, or the default from Settings. Set a card's time when you edit it.
+        </small>
+      )}
     </>
   );
 }

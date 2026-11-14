@@ -11,11 +11,13 @@ interface Props {
   deck: Deck;
   card?: Card;
   type: CardType;
+  /** Seconds a question gets in a quiz when the card doesn't set its own time (from Settings). */
+  defaultTime: number;
   onSave: (card: Card, addAnother: boolean) => void;
   onCancel: () => void;
 }
 
-export function CardEditor({ deck, card, type, onSave, onCancel }: Props) {
+export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: Props) {
   const [form, setForm] = useState<CardForm>(() => (card ? cardToForm(card) : emptyForm(type)));
   const [id, setId] = useState(() => card?.id ?? uid('c-'));
   const result = useMemo(() => formToCard(form, id), [form, id]);
@@ -269,6 +271,21 @@ export function CardEditor({ deck, card, type, onSave, onCancel }: Props) {
           {text('hint', 'Hint (optional)')}
           {text('explanation', 'Explanation shown after answering (optional)', { rows: 2 })}
           {text('tags', 'Tags', { placeholder: 'A1, verbs' })}
+          <label className="field time-field">
+            <span>Time in quizzes (seconds)</span>
+            <input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={form.time}
+              placeholder={`${defaultTime} (default)`}
+              onChange={(e) => set('time', e.target.value)}
+            />
+            <small>
+              How long this question gets in the deck Quiz and in timed quizzes. Leave empty to use the default ({defaultTime} s), which you can
+              change in Settings. Study (review) has no clock.
+            </small>
+          </label>
 
           {result.error && <p className="error">⚠ {result.error}</p>}
           <div className="row">
