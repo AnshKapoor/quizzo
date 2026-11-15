@@ -20,7 +20,8 @@ interface Props {
   onStudy: (mode: 'review' | 'quiz') => void;
   onTimedQuiz: (quizId: string) => void;
   onHelp: (topic?: string) => void;
-  onAddCard: (type: CardType) => void;
+  /** `wordBank` starts a fill-the-blanks card with the word bank switched on. */
+  onAddCard: (type: CardType, wordBank?: boolean) => void;
   onEditCard: (cardId: string) => void;
   onDeleteCard: (cardId: string) => void;
   onDeleteDeck: () => void;
@@ -245,6 +246,10 @@ export function DeckView(p: Props) {
                 <span className="sub">{CARD_HELP[t].goodFor}</span>
               </button>
             ))}
+            <button type="button" className="sheet-item" onClick={() => p.onAddCard('cloze', true)}>
+              <strong className="badge-cloze">Word bank (fill the blanks)</strong>
+              <span className="sub">A text with gaps and a box of words on top; pick which word goes in which gap.</span>
+            </button>
           </div>
           <button type="button" className="ghost help-link" onClick={() => p.onHelp('types')}>
             See an example of every type

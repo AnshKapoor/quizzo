@@ -44,7 +44,7 @@ type View =
   | { name: 'backup' }
   | { name: 'custom-edit'; quiz: CustomQuiz; isNew: boolean }
   | { name: 'custom-test'; quizId: string }
-  | { name: 'edit'; deckId: string; cardId?: string; type: CardType };
+  | { name: 'edit'; deckId: string; cardId?: string; type: CardType; wordBank?: boolean };
 
 export default function App() {
   const [lib, setLib] = useState<Library | null>(null);
@@ -241,7 +241,7 @@ export default function App() {
         onStudy={(mode) => setView({ name: 'study', deckId: deck.id, mode })}
         onTimedQuiz={(quizId) => setView({ name: 'test', deckId: deck.id, quizId })}
         onHelp={help}
-        onAddCard={(type) => setView({ name: 'edit', deckId: deck.id, type })}
+        onAddCard={(type, wordBank) => setView({ name: 'edit', deckId: deck.id, type, wordBank })}
         onEditCard={(cardId) => {
           const c = deck.cards.find((x) => x.id === cardId);
           if (c) setView({ name: 'edit', deckId: deck.id, cardId, type: c.type });
@@ -298,6 +298,7 @@ export default function App() {
         deck={deck}
         card={deck.cards.find((c) => c.id === view.cardId)}
         type={view.type}
+        wordBank={view.wordBank}
         defaultTime={defaultQuestionTime(lib)}
         onCancel={back}
         onSave={(card, another) => {

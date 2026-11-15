@@ -56,6 +56,22 @@ export function ClozeBankView({ card, lang, onAnswer }: CardViewProps<ClozeCard>
   return (
     <div className="card-body" ref={flip.ref}>
       {card.translation && <div className="sub translation">{card.translation}</div>}
+      {/* The word bank: a box above the text. It stays after checking so the card keeps its size. */}
+      <div className="order-pool word-bank" aria-label="Word bank">
+        {tiles.map((w, i) => (
+          <button
+            key={i}
+            type="button"
+            data-flip={i}
+            className={`token draggable ${filled.includes(i) ? 'used' : ''}`}
+            disabled={!!results || filled.includes(i)}
+            onPointerDown={(e) => !results && startDrag(e, i)}
+            onClick={() => fill(active, i)}
+          >
+            {w}
+          </button>
+        ))}
+      </div>
       <div className="cloze">
         {segments.map((s, k) => {
           if (s.kind === 'text') return <Fragment key={k}>{s.text}</Fragment>;
@@ -79,23 +95,6 @@ export function ClozeBankView({ card, lang, onAnswer }: CardViewProps<ClozeCard>
           );
         })}
       </div>
-      {!results && (
-        <div className="order-pool">
-          {tiles.map((w, i) => (
-            <button
-              key={i}
-              type="button"
-              data-flip={i}
-              className={`token draggable ${filled.includes(i) ? 'used' : ''}`}
-              disabled={filled.includes(i)}
-              onPointerDown={(e) => startDrag(e, i)}
-              onClick={() => fill(active, i)}
-            >
-              {w}
-            </button>
-          ))}
-        </div>
-      )}
       {!results && (
         <CheckButton disabled={filled.includes(null)} onClick={check} />
       )}

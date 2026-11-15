@@ -14,14 +14,16 @@ interface Props {
   deck: Deck;
   card?: Card;
   type: CardType;
+  /** New card only: start with the word bank switched on (fill the blanks from a box of words). */
+  wordBank?: boolean;
   /** Seconds a question gets in a quiz when the card doesn't set its own time (from Settings). */
   defaultTime: number;
   onSave: (card: Card, addAnother: boolean) => void;
   onCancel: () => void;
 }
 
-export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: Props) {
-  const [form, setForm] = useState<CardForm>(() => (card ? cardToForm(card) : emptyForm(type)));
+export function CardEditor({ deck, card, type, wordBank = false, defaultTime, onSave, onCancel }: Props) {
+  const [form, setForm] = useState<CardForm>(() => (card ? cardToForm(card) : { ...emptyForm(type), wordBank }));
   const [id, setId] = useState(() => card?.id ?? uid('c-'));
   const result = useMemo(() => formToCard(form, id), [form, id]);
   // Preview: vocabulary entries show one tab per generated question.
@@ -75,7 +77,7 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
     () => !!(form.image || form.hint || form.hintImage || form.explanation || form.tags || form.time),
   );
   const help = CARD_HELP[form.type];
-  const isEmpty = JSON.stringify(form) === JSON.stringify(emptyForm(form.type));
+  const isEmpty = JSON.stringify(form) === JSON.stringify({ ...emptyForm(form.type), wordBank: form.wordBank });
   const fillExample = () => {
     if (isEmpty || confirm('Replace what you have typed with the example?')) setForm(cardToForm(help.example));
   };
@@ -99,7 +101,7 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
     if (result.card) {
       onSave(result.card, another);
       if (another) {
-        setForm(emptyForm(form.type));
+        setForm({ ...emptyForm(form.type), wordBank: form.wordBank });
         setId(uid('c-'));
       }
     }
@@ -204,10 +206,10 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
 
           {form.type === 'cloze' && (
             <>
-              {text('text', 'Sentence', {
-                rows: 3,
-                placeholder: 'Ich {{heiße::heißen}} Anna.',
-                help: 'Wrap blanks in {{ }}. Alternatives: {{schön|gut}}. Hint: {{heiße::heißen}}.',
+              {text('text', 'Sentence or paragraph', {
+                rows: 5,
+                placeholder: form.wordBank ? 'Ich {{wohne}} in Berlin. Meine Schwester {{heißt}} Anna.' : 'Ich {{heiße::heißen}} Anna.',
+                help: 'Wrap blanks in {{ }}. Alternatives: {{schön|gut}}. Hint: {{heiße::heißen}}. Line breaks are kept.',
               })}
               {text('translation', 'Translation')}
               {check('caseSensitive', 'Capitalisation must match (useful for nouns)')}
