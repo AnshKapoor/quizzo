@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AnswerResult, Grade, QuizAttempt, QuizPreset } from '../types';
-import { CARD_TYPE_LABELS, cardSummary } from '../lib/cardForm';
+import { CARD_KIND_LABELS, cardKind, cardSummary } from '../lib/cardForm';
 import {
   buildQuizQueue,
   CUSTOM_QUIZ_OWNER,
@@ -281,7 +281,7 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
                   <span className="outcome" title={OUTCOME_TEXT[outcomes[i]]} aria-label={OUTCOME_TEXT[outcomes[i]]}>
                     {OUTCOME_ICON[outcomes[i]]}
                   </span>
-                  <span className="badge">{it.variant ? VARIANT_LABELS[it.variant] : CARD_TYPE_LABELS[it.card.type]}</span>
+                  <span className="badge">{it.variant ? VARIANT_LABELS[it.variant] : CARD_KIND_LABELS[cardKind(it.card)]}</span>
                   <span className="summary">{cardSummary(it.card)}</span>
                 </li>
               ))}

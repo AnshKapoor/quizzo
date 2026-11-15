@@ -1,4 +1,4 @@
-import type { Card, CardType, Deck, QuizPreset } from '../types';
+import type { Card, CardKind, CardType, Deck, QuizPreset } from '../types';
 import { blankCount } from './cloze';
 import { parseSpot } from './spot';
 import { uid } from './util';
@@ -127,7 +127,7 @@ function validateQuizzes(raw: unknown, errors: string[]): QuizPreset[] | undefin
       errors.push(`timed quiz #${i + 1}: needs a "title"`);
       return;
     }
-    const types = isStrArr(q.types) ? (q.types.filter((t: string) => CARD_TYPES.includes(t as CardType)) as CardType[]) : [];
+    const types = isStrArr(q.types) ? (q.types.filter((t: string) => t === 'bank' || CARD_TYPES.includes(t as CardType)) as CardKind[]) : [];
     const tags = isStrArr(q.tags) ? q.tags.filter(isStr) : [];
     let id = isStr(q.id) ? q.id : uid('q-');
     while (out.some((x) => x.id === id)) id = uid('q-');

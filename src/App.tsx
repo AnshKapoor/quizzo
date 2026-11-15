@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CardType, CustomQuiz, Library } from './types';
+import type { CardKind, CustomQuiz, Library } from './types';
 import * as L from './lib/library';
 import { loadLibrary, readFileText, saveLibrary } from './lib/storage';
 import { uid } from './lib/util';
+import { cardKind } from './lib/cardForm';
 import { parseImport } from './lib/validate';
 import { Home } from './screens/Home';
 import { DeckView } from './screens/DeckView';
@@ -44,7 +45,7 @@ type View =
   | { name: 'backup' }
   | { name: 'custom-edit'; quiz: CustomQuiz; isNew: boolean }
   | { name: 'custom-test'; quizId: string }
-  | { name: 'edit'; deckId: string; cardId?: string; type: CardType; wordBank?: boolean };
+  | { name: 'edit'; deckId: string; cardId?: string; kind: CardKind };
 
 export default function App() {
   const [lib, setLib] = useState<Library | null>(null);
@@ -241,10 +242,10 @@ export default function App() {
         onStudy={(mode) => setView({ name: 'study', deckId: deck.id, mode })}
         onTimedQuiz={(quizId) => setView({ name: 'test', deckId: deck.id, quizId })}
         onHelp={help}
-        onAddCard={(type, wordBank) => setView({ name: 'edit', deckId: deck.id, type, wordBank })}
+        onAddCard={(kind) => setView({ name: 'edit', deckId: deck.id, kind })}
         onEditCard={(cardId) => {
           const c = deck.cards.find((x) => x.id === cardId);
-          if (c) setView({ name: 'edit', deckId: deck.id, cardId, type: c.type });
+          if (c) setView({ name: 'edit', deckId: deck.id, cardId, kind: cardKind(c) });
         }}
         onDeleteCard={(cardId) => update((l) => L.removeCard(l, deck.id, cardId))}
         onDeleteDeck={() => {
@@ -297,8 +298,7 @@ export default function App() {
         key={view.cardId ?? 'new'}
         deck={deck}
         card={deck.cards.find((c) => c.id === view.cardId)}
-        type={view.type}
-        wordBank={view.wordBank}
+        kind={view.kind}
         defaultTime={defaultQuestionTime(lib)}
         onCancel={back}
         onSave={(card, another) => {

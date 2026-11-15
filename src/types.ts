@@ -1,5 +1,12 @@
 // ---- Deck / card model. This is exactly what lives in the JSON files. ----
 
+/**
+ * What a card is called in the app. The same as its type, except that a cloze card with a word
+ * bank is shown as a type of its own ('bank'). It is still stored as cloze + `wordBank`, so deck
+ * files and backups stay readable by older versions.
+ */
+export type CardKind = CardType | 'bank';
+
 export type CardType =
   | 'flashcard'
   | 'mcq'
@@ -190,7 +197,7 @@ export interface QuizPreset {
   /** Each question gets its card's own `time` (or the default from Settings) instead of `perQuestion`. */
   cardTimes?: boolean;
   /** Only use these card types (empty / missing = all). */
-  types?: CardType[];
+  types?: CardKind[];
   /** Only use cards with at least one of these tags (empty / missing = all). */
   tags?: string[];
 }

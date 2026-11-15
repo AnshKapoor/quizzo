@@ -1,5 +1,5 @@
 // Maps cards to/from simple text fields so every card type can be edited with plain inputs.
-import type { Card, CardType } from '../types';
+import type { Card, CardKind, CardType } from '../types';
 import { validateCard } from './validate';
 
 export interface CardForm {
@@ -58,6 +58,31 @@ export const CARD_TYPE_LABELS: Record<CardType, string> = {
   sequence: 'Sequence',
   table: 'Fill the table',
 };
+
+/** Names of everything that can be picked as a "card type" in the app, in menu order. */
+export const CARD_KIND_LABELS: Record<CardKind, string> = {
+  vocab: CARD_TYPE_LABELS.vocab,
+  flashcard: CARD_TYPE_LABELS.flashcard,
+  mcq: CARD_TYPE_LABELS.mcq,
+  match: CARD_TYPE_LABELS.match,
+  cloze: CARD_TYPE_LABELS.cloze,
+  bank: 'Word bank',
+  order: CARD_TYPE_LABELS.order,
+  categorize: CARD_TYPE_LABELS.categorize,
+  spot: CARD_TYPE_LABELS.spot,
+  dictation: CARD_TYPE_LABELS.dictation,
+  sequence: CARD_TYPE_LABELS.sequence,
+  table: CARD_TYPE_LABELS.table,
+};
+
+export const CARD_KINDS = Object.keys(CARD_KIND_LABELS) as CardKind[];
+
+/** The kind a card is shown as: its type, or 'bank' for a cloze card with a word bank. */
+export const cardKind = (card: { type: CardType; wordBank?: boolean }): CardKind =>
+  card.type === 'cloze' && card.wordBank ? 'bank' : card.type;
+
+/** The stored type behind a kind. */
+export const kindType = (kind: CardKind): CardType => (kind === 'bank' ? 'cloze' : kind);
 
 export function emptyForm(type: CardType): CardForm {
   return {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { Card, CardType } from '../types';
-import { CARD_TYPE_LABELS } from '../lib/cardForm';
+import type { Card, CardKind } from '../types';
+import { CARD_KIND_LABELS, CARD_KINDS } from '../lib/cardForm';
 import { CARD_HELP } from '../lib/help';
 import { expandCard, VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
@@ -15,7 +15,7 @@ interface Props {
   onReplayTour?: () => void;
 }
 
-const TYPES = Object.keys(CARD_TYPE_LABELS) as CardType[];
+const TYPES = CARD_KINDS;
 
 const SECTIONS = [
   ['start', 'Getting started'],
@@ -64,7 +64,7 @@ function Example({ card }: { card: Card }) {
 }
 
 export function Help({ topic, onBack, onAddExampleDeck, onReplayTour }: Props) {
-  const [open, setOpen] = useState<string | null>(TYPES.includes(topic as CardType) ? topic! : null);
+  const [open, setOpen] = useState<string | null>(TYPES.includes(topic as CardKind) ? topic! : null);
 
   useEffect(() => {
     if (topic) document.getElementById(`help-${topic}`)?.scrollIntoView();
@@ -210,7 +210,7 @@ export function Help({ topic, onBack, onAddExampleDeck, onReplayTour }: Props) {
                 }}
               >
                 <summary>
-                  <span className={`badge badge-${t}`}>{CARD_TYPE_LABELS[t]}</span> {h.summary}
+                  <span className={`badge badge-${t}`}>{CARD_KIND_LABELS[t]}</span> {h.summary}
                 </summary>
                 <div className="help-type-body">
                   <p>

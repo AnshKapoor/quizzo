@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { CardType, Deck, Library, QuizPreset } from '../types';
-import { CARD_TYPE_LABELS, cardSummary } from '../lib/cardForm';
+import type { CardKind, Deck, Library, QuizPreset } from '../types';
+import { CARD_KIND_LABELS, CARD_KINDS, cardKind, cardSummary } from '../lib/cardForm';
 import { cardDue, deckStats } from '../lib/library';
 import { newQuizPreset, percent, quizAttempts, quizPool, quizSummary } from '../lib/quiz';
 import { QuizPresetForm } from '../components/QuizPresetForm';
@@ -10,7 +10,7 @@ import { CARD_HELP } from '../lib/help';
 import { Sheet } from '../components/Sheet';
 
 const LANGUAGES: Record<string, string> = { de: 'German', fr: 'French', es: 'Spanish', it: 'Italian', en: 'English' };
-const TYPES = Object.keys(CARD_TYPE_LABELS) as CardType[];
+const TYPES = CARD_KINDS;
 
 interface Props {
   deck: Deck;
@@ -20,8 +20,7 @@ interface Props {
   onStudy: (mode: 'review' | 'quiz') => void;
   onTimedQuiz: (quizId: string) => void;
   onHelp: (topic?: string) => void;
-  /** `wordBank` starts a fill-the-blanks card with the word bank switched on. */
-  onAddCard: (type: CardType, wordBank?: boolean) => void;
+  onAddCard: (kind: CardKind) => void;
   onEditCard: (cardId: string) => void;
   onDeleteCard: (cardId: string) => void;
   onDeleteDeck: () => void;
@@ -37,7 +36,7 @@ function dueLabel(due: number | undefined): string {
 
 export function DeckView(p: Props) {
   const { deck, library } = p;
-  const [filter, setFilter] = useState<CardType | 'all'>('all');
+  const [filter, setFilter] = useState<CardKind | 'all'>('all');
   /** The timed quiz being created or edited. */
   const [editing, setEditing] = useState<QuizPreset | null>(null);
   /** Which bottom sheet is open: the card type picker or the deck menu. */
@@ -53,7 +52,7 @@ export function DeckView(p: Props) {
     p.onChange({ ...deck, quizzes: rest.length ? rest : undefined });
   };
   const stats = deckStats(deck, library);
-  const cards = filter === 'all' ? deck.cards : deck.cards.filter((c) => c.type === filter);
+  const cards = filter === 'all' ? deck.cards : deck.cards.filter((c) => cardKind(c) === filter);
 
   return (
     <div className="screen">
@@ -193,7 +192,7 @@ export function DeckView(p: Props) {
         {deck.cards.length > 0 && (
           <div className="row filter-row">
             {(['all', ...TYPES] as const)
-              .filter((t) => t === 'all' || t === filter || deck.cards.some((c) => c.type === t))
+              .filter((t) => t === 'all' || t === filter || deck.cards.some((c) => cardKind(c) === t))
               .map((t) => (
                 <button
                   key={t}
@@ -201,7 +200,7 @@ export function DeckView(p: Props) {
                   className={`chip ${filter === t ? 'active' : ''}`}
                   onClick={() => setFilter(t)}
                 >
-                  {t === 'all' ? `All (${deck.cards.length})` : `${CARD_TYPE_LABELS[t]} (${deck.cards.filter((c) => c.type === t).length})`}
+                  {t === 'all' ? `All (${deck.cards.length})` : `${CARD_KIND_LABELS[t]} (${deck.cards.filter((c) => cardKind(c) === t).length})`}
                 </button>
               ))}
           </div>
@@ -210,7 +209,7 @@ export function DeckView(p: Props) {
         <ul className="card-list">
           {cards.map((c) => (
             <li key={c.id}>
-              <span className={`badge badge-${c.type}`}>{CARD_TYPE_LABELS[c.type]}</span>
+              <span className={`badge badge-${cardKind(c)}`}>{CARD_KIND_LABELS[cardKind(c)]}</span>
               <button type="button" className="summary" onClick={() => p.onEditCard(c.id)}>
                 {cardSummary(c)}
               </button>
@@ -242,14 +241,10 @@ export function DeckView(p: Props) {
           <div className="type-grid">
             {TYPES.map((t) => (
               <button key={t} type="button" className="sheet-item" onClick={() => p.onAddCard(t)}>
-                <strong className={`badge-${t}`}>{CARD_TYPE_LABELS[t]}</strong>
+                <strong className={`badge-${t}`}>{CARD_KIND_LABELS[t]}</strong>
                 <span className="sub">{CARD_HELP[t].goodFor}</span>
               </button>
             ))}
-            <button type="button" className="sheet-item" onClick={() => p.onAddCard('cloze', true)}>
-              <strong className="badge-cloze">Word bank (fill the blanks)</strong>
-              <span className="sub">A text with gaps and a box of words on top; pick which word goes in which gap.</span>
-            </button>
           </div>
           <button type="button" className="ghost help-link" onClick={() => p.onHelp('types')}>
             See an example of every type

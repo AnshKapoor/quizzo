@@ -1,5 +1,5 @@
 // In-app help: what each card type is for, how to fill in its editor fields, and a ready-made example.
-import type { Card, CardType, Deck } from '../types';
+import type { Card, CardKind, Deck } from '../types';
 
 export interface CardHelp {
   /** One line: what the learner does. */
@@ -12,7 +12,7 @@ export interface CardHelp {
   example: Card;
 }
 
-export const CARD_HELP: Record<CardType, CardHelp> = {
+export const CARD_HELP: Record<CardKind, CardHelp> = {
   vocab: {
     summary: 'Enter a word once and the app makes up to 5 questions from it.',
     goodFor: 'Learning new words. The quickest way to build a vocabulary deck.',
@@ -90,13 +90,12 @@ export const CARD_HELP: Record<CardType, CardHelp> = {
     },
   },
   cloze: {
-    summary: 'Fill the gaps in a sentence, by typing or by picking words from a word bank.',
+    summary: 'Fill the gaps in a sentence by typing the missing words.',
     goodFor: 'Verb endings, articles, prepositions: grammar in context.',
     steps: [
       'Sentence: wrap each gap in double curly brackets, e.g. Ich {{wohne}} in Berlin.',
       'Several right answers: separate them with |, e.g. {{schön|gut}}.',
       'A hint inside the empty gap: add it after ::, e.g. {{wohne::wohnen}}.',
-      'Tick "Word bank" to let the learner drag words in instead of typing; add wrong words under "Extra wrong words".',
       'Typing ae / oe / ue / ss for ä / ö / ü / ß is accepted. Tick "Capitalisation must match" for nouns.',
     ],
     example: {
@@ -104,6 +103,23 @@ export const CARD_HELP: Record<CardType, CardHelp> = {
       type: 'cloze',
       text: 'Ich {{wohne::wohnen}} in Berlin und {{arbeite::arbeiten}} in Potsdam.',
       translation: 'I live in Berlin and work in Potsdam.',
+    },
+  },
+  bank: {
+    summary: 'The missing words are listed in a box on top, jumbled. Drag each one into its gap.',
+    goodFor: 'Longer texts with several gaps, and learners who are not ready to type the words yet.',
+    steps: [
+      'Text: write the sentence or paragraph and wrap each missing word in double curly brackets, e.g. Ich {{wohne}} in Berlin.',
+      'Every word in brackets appears in the box on top, in mixed order. Line breaks in the text are kept.',
+      'Extra wrong words: optional, comma separated. Leave empty so that every word in the box belongs to one gap.',
+      'Learners drag a word into a gap, or tap the word and it goes into the highlighted gap.',
+    ],
+    example: {
+      id: 'help-bank',
+      type: 'cloze',
+      text: 'Ich {{wohne}} in Berlin. Meine Schwester {{heißt}} Anna und sie {{arbeitet}} in einer Schule.',
+      translation: 'I live in Berlin. My sister is called Anna and she works in a school.',
+      wordBank: true,
     },
   },
   order: {

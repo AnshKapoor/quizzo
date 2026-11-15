@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { Card, CardType, Deck } from '../types';
-import { CARD_TYPE_LABELS, cardToForm, emptyForm, formToCard, type CardForm } from '../lib/cardForm';
+import type { Card, CardKind, Deck } from '../types';
+import { CARD_KIND_LABELS, cardKind, cardToForm, emptyForm, formToCard, kindType, type CardForm } from '../lib/cardForm';
 import { uid } from '../lib/util';
 import { expandCard, VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
@@ -13,17 +13,20 @@ import { Field } from '../components/common';
 interface Props {
   deck: Deck;
   card?: Card;
-  type: CardType;
-  /** New card only: start with the word bank switched on (fill the blanks from a box of words). */
-  wordBank?: boolean;
+  /** The kind of card to start with (new cards). */
+  kind: CardKind;
   /** Seconds a question gets in a quiz when the card doesn't set its own time (from Settings). */
   defaultTime: number;
   onSave: (card: Card, addAnother: boolean) => void;
   onCancel: () => void;
 }
 
-export function CardEditor({ deck, card, type, wordBank = false, defaultTime, onSave, onCancel }: Props) {
-  const [form, setForm] = useState<CardForm>(() => (card ? cardToForm(card) : { ...emptyForm(type), wordBank }));
+/** An empty form for a kind of card. */
+const blankForm = (kind: CardKind): CardForm => ({ ...emptyForm(kindType(kind)), wordBank: kind === 'bank' });
+
+export function CardEditor({ deck, card, kind: startKind, defaultTime, onSave, onCancel }: Props) {
+  const [form, setForm] = useState<CardForm>(() => (card ? cardToForm(card) : blankForm(startKind)));
+  const kind = cardKind(form);
   const [id, setId] = useState(() => card?.id ?? uid('c-'));
   const result = useMemo(() => formToCard(form, id), [form, id]);
   // Preview: vocabulary entries show one tab per generated question.
@@ -62,7 +65,7 @@ export function CardEditor({ deck, card, type, wordBank = false, defaultTime, on
     </Field>
   );
 
-  const check = (k: 'shuffle' | 'caseSensitive' | 'wordBank', label: string) => (
+  const check = (k: 'shuffle' | 'caseSensitive', label: string) => (
     <label className="check">
       <input type="checkbox" checked={form[k]} onChange={(e) => set(k, e.target.checked)} /> {label}
     </label>
@@ -76,8 +79,8 @@ export function CardEditor({ deck, card, type, wordBank = false, defaultTime, on
   const [hadExtras] = useState(
     () => !!(form.image || form.hint || form.hintImage || form.explanation || form.tags || form.time),
   );
-  const help = CARD_HELP[form.type];
-  const isEmpty = JSON.stringify(form) === JSON.stringify({ ...emptyForm(form.type), wordBank: form.wordBank });
+  const help = CARD_HELP[kind];
+  const isEmpty = JSON.stringify(form) === JSON.stringify(blankForm(kind));
   const fillExample = () => {
     if (isEmpty || confirm('Replace what you have typed with the example?')) setForm(cardToForm(help.example));
   };
@@ -101,7 +104,7 @@ export function CardEditor({ deck, card, type, wordBank = false, defaultTime, on
     if (result.card) {
       onSave(result.card, another);
       if (another) {
-        setForm({ ...emptyForm(form.type), wordBank: form.wordBank });
+        setForm(blankForm(kind));
         setId(uid('c-'));
       }
     }
@@ -146,11 +149,11 @@ export function CardEditor({ deck, card, type, wordBank = false, defaultTime, on
           <label className="field">
             <span>Card type</span>
             <select
-              value={form.type}
+              value={kind}
               disabled={!!card}
-              onChange={(e) => setForm({ ...emptyForm(e.target.value as CardType) })}
+              onChange={(e) => setForm(blankForm(e.target.value as CardKind))}
             >
-              {Object.entries(CARD_TYPE_LABELS).map(([t, l]) => (
+              {Object.entries(CARD_KIND_LABELS).map(([t, l]) => (
                 <option key={t} value={t}>
                   {l}
                 </option>
@@ -159,7 +162,7 @@ export function CardEditor({ deck, card, type, wordBank = false, defaultTime, on
           </label>
 
           <details className="help-box" data-tour="editor-help">
-            <summary>How to write a {CARD_TYPE_LABELS[form.type].toLowerCase()} card</summary>
+            <summary>How to write a {CARD_KIND_LABELS[kind].toLowerCase()} card</summary>
             <p>{help.summary}</p>
             <p className="sub">Good for: {help.goodFor}</p>
             <ol>
@@ -171,7 +174,7 @@ export function CardEditor({ deck, card, type, wordBank = false, defaultTime, on
               <button type="button" onClick={fillExample}>
                 Fill in an example
               </button>
-              <button type="button" className="ghost" onClick={() => setHelpTopic(form.type)}>
+              <button type="button" className="ghost" onClick={() => setHelpTopic(kind)}>
                 More help
               </button>
             </div>
@@ -206,18 +209,19 @@ export function CardEditor({ deck, card, type, wordBank = false, defaultTime, on
 
           {form.type === 'cloze' && (
             <>
-              {text('text', 'Sentence or paragraph', {
+              {text('text', form.wordBank ? 'Text with gaps' : 'Sentence or paragraph', {
                 rows: 5,
                 placeholder: form.wordBank ? 'Ich {{wohne}} in Berlin. Meine Schwester {{heißt}} Anna.' : 'Ich {{heiße::heißen}} Anna.',
-                help: 'Wrap blanks in {{ }}. Alternatives: {{schön|gut}}. Hint: {{heiße::heißen}}. Line breaks are kept.',
+                help: form.wordBank
+                  ? 'Wrap each missing word in {{ }}. Those words appear in the box on top, jumbled. Line breaks are kept.'
+                  : 'Wrap blanks in {{ }}. Alternatives: {{schön|gut}}. Hint: {{heiße::heißen}}. Line breaks are kept.',
               })}
               {text('translation', 'Translation')}
               {check('caseSensitive', 'Capitalisation must match (useful for nouns)')}
-              {check('wordBank', 'Word bank: pick words instead of typing')}
               {form.wordBank &&
-                text('distractors', 'Extra wrong words for the bank', {
+                text('distractors', 'Extra wrong words in the box (optional)', {
                   placeholder: 'der, den, des',
-                  help: 'Comma separated. The correct answers are added automatically.',
+                  help: 'Comma separated. Leave empty so every word in the box belongs to one gap.',
                 })}
             </>
           )}

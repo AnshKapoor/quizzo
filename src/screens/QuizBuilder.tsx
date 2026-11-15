@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { CardType, CustomQuiz, Library } from '../types';
-import { CARD_TYPE_LABELS, cardSummary } from '../lib/cardForm';
+import type { CardKind, CustomQuiz, Library } from '../types';
+import { CARD_KIND_LABELS, cardKind, cardSummary } from '../lib/cardForm';
 import { customQuizItems, quizSummary } from '../lib/quiz';
 import { expandCard, VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
@@ -24,7 +24,7 @@ export function QuizBuilder({ library, quiz, isNew, onSave, onCancel, onHelp }: 
   const [picks, setPicks] = useState(quiz.picks);
   const [query, setQuery] = useState('');
   const [deckIds, setDeckIds] = useState<string[]>([]);
-  const [types, setTypes] = useState<CardType[]>([]);
+  const [types, setTypes] = useState<CardKind[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [onlySelected, setOnlySelected] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function QuizBuilder({ library, quiz, isNew, onSave, onCancel, onHelp }: 
   const dirty = JSON.stringify(draft) !== JSON.stringify(quiz);
 
   const allCards = library.decks.flatMap((d) => d.cards);
-  const allTypes = Array.from(new Set(allCards.map((c) => c.type)));
+  const allTypes = Array.from(new Set(allCards.map(cardKind)));
   const allTags = Array.from(new Set(allCards.flatMap((c) => c.tags ?? []))).sort((a, b) => a.localeCompare(b));
 
   // Cards that pass the filters, grouped by deck.
@@ -45,7 +45,7 @@ export function QuizBuilder({ library, quiz, isNew, onSave, onCancel, onHelp }: 
     .map((deck) => ({
       deck,
       cards: deck.cards.filter((c) => {
-        if (types.length && !types.includes(c.type)) return false;
+        if (types.length && !types.includes(cardKind(c))) return false;
         if (tags.length && !c.tags?.some((t) => tags.includes(t))) return false;
         if (onlySelected && !picked.has(pickKey(deck.id, c.id))) return false;
         if (q && !`${cardSummary(c)} ${c.tags?.join(' ') ?? ''}`.toLowerCase().includes(q)) return false;
@@ -129,7 +129,7 @@ export function QuizBuilder({ library, quiz, isNew, onSave, onCancel, onHelp }: 
                   aria-pressed={types.includes(t)}
                   onClick={() => setTypes((l) => toggle(l, t))}
                 >
-                  {CARD_TYPE_LABELS[t]}
+                  {CARD_KIND_LABELS[t]}
                 </button>
               ))}
             </div>
@@ -201,7 +201,7 @@ export function QuizBuilder({ library, quiz, isNew, onSave, onCancel, onHelp }: 
                     <li key={c.id} className={picked.has(k) ? 'picked' : ''}>
                       <label className="pick-row">
                         <input type="checkbox" checked={picked.has(k)} onChange={() => flip(deck.id, c.id)} />
-                        <span className={`badge badge-${c.type}`}>{CARD_TYPE_LABELS[c.type]}</span>
+                        <span className={`badge badge-${cardKind(c)}`}>{CARD_KIND_LABELS[cardKind(c)]}</span>
                         <span className="pick-summary">{cardSummary(c)}</span>
                       </label>
                       <button

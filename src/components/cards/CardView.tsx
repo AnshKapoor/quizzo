@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { AnswerResult, StudyCard } from '../../types';
-import { CARD_TYPE_LABELS } from '../../lib/cardForm';
+import { CARD_KIND_LABELS, cardKind } from '../../lib/cardForm';
 import { CategorizeView } from './CategorizeView';
 import { ClozeBankView } from './ClozeBankView';
 import { ClozeView } from './ClozeView';
@@ -36,7 +36,7 @@ export function CardView(props: CardViewProps) {
   return (
     <div className={`card card-${card.type}`}>
       <div className="card-head">
-        <span className="card-type">{props.label ?? CARD_TYPE_LABELS[card.type]}</span>
+        <span className="card-type">{props.label ?? CARD_KIND_LABELS[cardKind(card)]}</span>
         {/* In the header from the start: a hint is only useful before answering. */}
         {hasHint && (
           <button

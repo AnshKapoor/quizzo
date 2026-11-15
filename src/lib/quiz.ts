@@ -3,6 +3,7 @@ import type { AnswerResult, Card, CustomQuiz, Deck, Grade, Library, QuizAttempt,
 import { spreadOut } from './library';
 import { shuffle, uid } from './util';
 import { expandCard, expandDeck } from './vocab';
+import { cardKind } from './cardForm';
 
 /** `deckId` used for the results of custom (multi-deck) quizzes. */
 export const CUSTOM_QUIZ_OWNER = '@custom';
@@ -57,7 +58,7 @@ export function quizPool(deck: Deck, quiz: QuizPreset): StudyItem[] {
   return expandDeck(deck).filter((it) => {
     const source = byId.get(it.sourceId);
     if (!source) return false;
-    if (quiz.types?.length && !quiz.types.includes(source.type)) return false;
+    if (quiz.types?.length && !quiz.types.includes(cardKind(source))) return false;
     if (quiz.tags?.length && !source.tags?.some((t) => quiz.tags!.includes(t))) return false;
     return true;
   });

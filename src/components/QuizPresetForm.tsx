@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { CardType, Deck, QuizPreset } from '../types';
-import { CARD_TYPE_LABELS } from '../lib/cardForm';
+import type { CardKind, Deck, QuizPreset } from '../types';
+import { CARD_KIND_LABELS, cardKind } from '../lib/cardForm';
 import { quizPool, quizSummary } from '../lib/quiz';
 
 interface Props {
@@ -109,10 +109,10 @@ export function QuizBasicsFields({
 /** Set up a timed quiz: how many questions, how much time, and which cards to draw from. */
 export function QuizPresetForm({ deck, quiz, onSave, onCancel }: Props) {
   const [basics, setBasics] = useState(() => basicsFromQuiz(quiz));
-  const [types, setTypes] = useState<CardType[]>(quiz.types ?? []);
+  const [types, setTypes] = useState<CardKind[]>(quiz.types ?? []);
   const [tags, setTags] = useState<string[]>(quiz.tags ?? []);
 
-  const deckTypes = Array.from(new Set(deck.cards.map((c) => c.type)));
+  const deckTypes = Array.from(new Set(deck.cards.map(cardKind)));
   const deckTags = Array.from(new Set(deck.cards.flatMap((c) => c.tags ?? []))).sort();
 
   const draft: QuizPreset = {
@@ -146,7 +146,7 @@ export function QuizPresetForm({ deck, quiz, onSave, onCancel }: Props) {
                 aria-pressed={types.includes(t)}
                 onClick={() => setTypes((l) => toggle(l, t))}
               >
-                {CARD_TYPE_LABELS[t]}
+                {CARD_KIND_LABELS[t]}
               </button>
             ))}
           </div>
