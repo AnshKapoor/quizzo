@@ -1,7 +1,7 @@
 // Smooth moves for word tiles ("FLIP": first, last, invert, play). Every tile carries data-flip="<key>";
 // when the same key shows up somewhere else after a change (pool → sentence, back, or neighbours closing a
 // gap), the tile glides from where it was instead of jumping. Hidden placeholders (.used) are ignored.
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 const DURATION = 240;
 const EASING = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
@@ -39,6 +39,28 @@ export function useFlip<T extends HTMLElement>(deps: unknown[]) {
     skip.current.clear();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
+
+  // A pool that stays in view while the text scrolls (the word bank) moves relative to the card,
+  // so take the "before" positions afresh when a tap, drag or key press begins.
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const remeasure = () => {
+      const base = el.getBoundingClientRect();
+      el.querySelectorAll<HTMLElement>('[data-flip]').forEach((tile) => {
+        // Tiles in mid-glide are not where they will end up; leave those as they were.
+        if (tile.classList.contains('used') || tile.getAnimations?.().length) return;
+        const r = tile.getBoundingClientRect();
+        last.current.set(tile.dataset.flip!, new DOMRect(r.left - base.left, r.top - base.top, r.width, r.height));
+      });
+    };
+    el.addEventListener('pointerdown', remeasure, { capture: true });
+    el.addEventListener('keydown', remeasure, { capture: true });
+    return () => {
+      el.removeEventListener('pointerdown', remeasure, { capture: true });
+      el.removeEventListener('keydown', remeasure, { capture: true });
+    };
+  }, []);
 
   return { ref: root, skipNext: (key: string | number) => skip.current.add(String(key)) };
 }
