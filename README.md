@@ -167,7 +167,8 @@ src/
   screens/                 Home, DeckView, CardEditor, Study, TimedQuiz, QuizBuilder, Appearance, Backup, Help
   lib/cloud.ts             backup files + Google Sheet backup (includes the Apps Script users paste into their Sheet)
 electron/                  desktop main + preload (JSON file storage, HTTP for cloud backup)
-build/                     app icon (icon.svg is the source of icon.png)
+build/                     app icon (logo.webp is the source; scripts/make-icons.py builds every icon from it)
+public/                    browser tab icon
 android/                   generated Capacitor project
 docs/deck-format.md        JSON deck format reference
 docs/screenshots/          pictures used in this README
