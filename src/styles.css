@@ -258,7 +258,7 @@ kbd {
 .bar > .ghost:first-child { flex: 0 1 auto; margin-left: -0.5rem; padding-inline: 0.5rem; }
 .bar-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: transparent; border-color: transparent; padding: 0.4rem 0.7rem; }
 .mode-pill { font-size: 0.8rem; font-weight: 600; background: var(--surface-2); padding: 0.2rem 0.6rem; border-radius: 99px; }
-.counter { color: var(--muted); font-variant-numeric: tabular-nums; }
+.counter { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
 .progress { height: 4px; background: var(--surface-2); border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem; }
 .progress div { height: 100%; background: var(--accent); transition: width 0.25s; }
 

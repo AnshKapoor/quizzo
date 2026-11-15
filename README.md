@@ -1,7 +1,57 @@
-# Quizzo
+<h1 align="center">
+  <img src="build/icon.png" width="96" alt=""><br>
+  Quizzo
+</h1>
 
-Interactive flashcards with quiz-style card types, for desktop (Windows/macOS/Linux) and Android.
-First focus: learning German. Decks are JSON files that are easy to import, export and share.
+<p align="center"><b>Flashcards that quiz you back.</b></p>
+
+<p align="center">
+  <a href="https://github.com/AnshKapoor/quizzo/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/AnshKapoor/quizzo"></a>
+  <img alt="Platforms: Android, Windows, macOS, Linux" src="https://img.shields.io/badge/platforms-Android%20%7C%20Windows%20%7C%20macOS%20%7C%20Linux-blue">
+</p>
+
+Quizzo is a study app for language learners. Instead of only flipping cards, it asks you in twelve different
+ways: fill the gaps, put words in order, sort into groups, find the mistake, write what you hear, and more. It
+runs on Android and on the desktop (Windows, macOS, Linux) from one codebase, works offline, and keeps your
+decks as plain JSON files that are easy to share. It ships with two German A1 decks to start with.
+
+<p align="center">
+  <img src="docs/screenshots/home.jpg" width="19%" alt="Start screen with two decks">
+  <img src="docs/screenshots/deck.jpg" width="19%" alt="A deck with timed quizzes and its cards">
+  <img src="docs/screenshots/add-card.jpg" width="19%" alt="Choosing a card type">
+  <img src="docs/screenshots/question.jpg" width="19%" alt="A word bank question with a timer">
+  <img src="docs/screenshots/result.jpg" width="19%" alt="The result of a question with the explanation">
+</p>
+
+## Download
+
+Get the latest version from [Releases](https://github.com/AnshKapoor/quizzo/releases/latest):
+
+| Device  | File                                                       |
+|---------|------------------------------------------------------------|
+| Android | `quizzo-x.y.z.apk`                                         |
+| Windows | `Quizzo-Setup-x.y.z.exe` (installer) or `Quizzo-Portable-x.y.z.exe` |
+| macOS   | `Quizzo-x.y.z-mac-arm64.dmg` (Apple silicon) or `-mac-x64.dmg` (Intel) |
+| Linux   | `Quizzo-x.y.z-linux-x86_64.AppImage`                       |
+
+The desktop apps aren't code-signed, so Windows SmartScreen and macOS Gatekeeper warn on first start. On
+Android, allow installing from your browser or file manager when asked.
+
+## What it does
+
+- **Twelve question types** (table below), all usable by tapping or dragging.
+- **Study** with spaced repetition: cards that are due plus up to 10 new ones; missed cards come back once at the end.
+- **Quiz** against the clock: every question has its own timer, and faster right answers get a better mark.
+- **Timed quizzes** saved with a deck: number of questions, a time limit for the whole quiz and/or per question,
+  optional card-type and tag filters, a per-question review at the end, and your last results.
+- **Custom quizzes** that mix questions from any of your decks.
+- **Make your own cards** in an editor with a live preview, pictures, hints and explanations. Built-in help has a
+  playable example of every card type.
+- **Backup to your own Google Sheet** and restore on any device; each device keeps one latest backup, and you can
+  save named backups on the side. Also available as a single backup file.
+- **Share decks** as `.json` files ([format](docs/deck-format.md)).
+- **Make it yours**: 8 themes, fonts, text size and card styles.
+- A short **guided tour** on first start shows where everything is.
 
 ## Card types
 
@@ -11,7 +61,8 @@ First focus: learning German. Decks are JSON files that are easy to import, expo
 | Flashcard             | Flip, then grade yourself Again / Hard / Good / Easy              |
 | Multiple choice       | One answer, or "select all that apply"                            |
 | Match the following   | Pair the items in two shuffled columns (tap or drag)              |
-| Complete the sentence | Type into blanks (ä/ö/ü/ß buttons; ae/oe/ue/ss accepted), or pick from a word bank |
+| Complete the sentence | Type into the blanks (ä/ö/ü/ß buttons; ae/oe/ue/ss accepted)      |
+| Word bank             | The missing words sit jumbled in a box on top; drag each into its gap. Works for whole paragraphs |
 | Word order            | Build the sentence from word tiles (tap or drag); other valid orders allowed |
 | Sort into groups      | Drag words into groups such as der / die / das                    |
 | Find the mistake      | Tap the wrong word(s); corrections shown afterwards              |
@@ -21,28 +72,23 @@ First focus: learning German. Decks are JSON files that are easy to import, expo
 
 Drag and drop uses pointer events, so it works with mouse and touch; every drag can also be done by tapping.
 
-Three ways to study a deck:
-- **Study**: spaced repetition (SM-2 style). Due cards plus up to 10 new ones; missed cards come back once at the end.
-- **Quiz**: 10 random cards with a score at the end.
-- **Timed quizzes**: tests saved with the deck: number of questions, a time limit for the whole quiz and/or per
-  question, and optional card-type and tag filters. Shows a countdown, a per-question review at the end, and
-  keeps your last results. Saved quizzes are part of the deck file, so they are shared along with it.
-- **Custom quizzes**: not tied to a deck. Pick any questions from the whole library (search, filter by deck,
-  type and tag, select all shown, preview), add an optional question count and timers, and run it like a timed
-  quiz. Answers still update each card's progress in its own deck. ⤓ exports one as a normal deck file to share.
-- **Appearance** (🎨 on the start screen): 8 themes (Match device, Light, Dark, Sepia, Ocean, Forest, Midnight,
-  High contrast), question text alignment (centred or left; the question always sits at the top), card style
-  (Raised, Flat, Outlined), font and text size. Stored in the library, so a backup restores it.
+While answering, the question stays fixed at the top and the Check button sits in a bar at the bottom of the
+screen; the result, the correct answer and the explanation appear in that same bar. A hint, if the card has one,
+is available from the card's corner before you answer.
 
-- **Backup & other devices** (☁ Backup on the start screen): back up everything (decks, quizzes, progress,
-  results, appearance) to a **Google Sheet** of your own and restore it on any device, including your phone. Set up once:
-  create a Sheet, paste the Apps Script that Quizzo shows into *Extensions → Apps Script*, deploy it as a web app
-  (Execute as: Me, Who has access: Anyone) and paste its URL into Quizzo. Other devices connect with the *connection
-  link* (URL + private key). Optional auto backup ~30 s after changes; the Sheet keeps the 20 newest backups.
-  Restore replaces everything (with undo) or only adds missing decks. Also available as a single backup file.
+## Backup and other devices
 
-Other features: built-in help (how to create decks and write every card type, with playable examples and an example deck), card editor with a live preview and step-by-step instructions, text-to-speech (🔊, desktop/browser), keyboard shortcuts
-(Space reveals, 1–4 grade, Enter next, Esc exits), phone-sized layout.
+☁ Backup on the start screen backs up everything (decks, quizzes, progress, results, appearance) to a **Google
+Sheet** of your own. Set up once: create a Sheet, paste the Apps Script that Quizzo shows into
+*Extensions → Apps Script*, deploy it as a web app (Execute as: Me, Who has access: Anyone) and paste its URL into
+Quizzo. Other devices connect with the *connection link* (URL + private key); keep that link private.
+
+Each backup replaces the previous one from the same device, optionally automatically about 30 s after changes.
+Type a name and press *Save as separate backup* to keep a copy that is never overwritten. Restoring either
+replaces everything (with undo) or merges card by card.
+
+Other features: text-to-speech (🔊, desktop/browser), keyboard shortcuts on the desktop (Space reveals, 1–4 grade,
+Enter next, Esc exits).
 
 ## Stack
 
@@ -50,7 +96,7 @@ Other features: built-in help (how to create decks and write every card type, wi
 - **Electron**: desktop shell (`electron/`), packaged with electron-builder. Library saved to `%APPDATA%\Quizzo\library.json`
 - **Capacitor**: Android shell (`android/`). Library saved in the WebView's IndexedDB (also used by the browser version)
 
-## Running it
+## Building from source
 
 ```bash
 npm install
@@ -124,6 +170,7 @@ electron/                  desktop main + preload (JSON file storage, HTTP for c
 build/                     app icon (icon.svg is the source of icon.png)
 android/                   generated Capacitor project
 docs/deck-format.md        JSON deck format reference
+docs/screenshots/          pictures used in this README
 ```
 
 ## Adding a new card type
@@ -141,5 +188,5 @@ docs/deck-format.md        JSON deck format reference
   the sentence. Store the library in a file rather than WebView storage.
 - Vocabulary: start new words as multiple choice and switch to typing once they're known.
 - Desktop: code signing, auto-update (electron-updater), use the app icon for Android too.
-- Card ideas: conjugation/declension tables, rewrite-the-sentence, label a picture, reading passages, speaking.
+- Card ideas: rewrite-the-sentence, label a picture, reading passages, speaking.
 - More languages: `deck.language.target` already drives TTS and the special-character bar.
