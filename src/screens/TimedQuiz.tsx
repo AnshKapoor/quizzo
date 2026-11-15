@@ -13,6 +13,7 @@ import {
   type QuizItem,
 } from '../lib/quiz';
 import { VARIANT_LABELS } from '../lib/vocab';
+import { MusicButton, useQuizMusic } from '../components/MusicButton';
 import { CardView } from '../components/cards/CardView';
 import { ActionSlotContext } from '../components/common';
 
@@ -61,6 +62,8 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   const reported = useRef(false);
   /** The bottom bar's slot for the card's Check button and result. */
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  // Background music plays while questions are on screen.
+  const music = useQuizMusic(phase === 'running');
 
   const available = pool.length;
   const best = history.reduce<QuizAttempt | null>(
@@ -175,6 +178,7 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
           ← {backLabel}
         </button>
         <span className="mode-pill">⏱ {quiz.title}</span>
+        {phase !== 'done' && <MusicButton {...music} />}
         {phase === 'running' && (
           <>
             <span className="counter">

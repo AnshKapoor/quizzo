@@ -5,6 +5,7 @@ import { VARIANT_LABELS } from '../lib/vocab';
 import { DEFAULT_QUESTION_TIME, GRADE_LABELS, speedGrade } from '../lib/quiz';
 import { CardView } from '../components/cards/CardView';
 import { ActionSlotContext } from '../components/common';
+import { MusicButton, useQuizMusic } from '../components/MusicButton';
 
 interface Props {
   deck: Deck;
@@ -36,6 +37,8 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
 
   const item = queue[pos];
   const finished = pos >= queue.length;
+  // Background music plays in quiz mode while questions are on screen.
+  const music = useQuizMusic(mode === 'quiz' && !finished);
 
   // Quiz mode: every question has its own clock (the card's time, or the default from Settings).
   const limit = mode === 'quiz' && item && !finished ? (item.card.time && item.card.time > 0 ? item.card.time : defaultTime) : 0;
@@ -113,6 +116,7 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
           ← {deck.title}
         </button>
         <span className="mode-pill">{mode === 'review' ? 'Review' : '⏱ Quiz'}</span>
+        {mode === 'quiz' && !finished && <MusicButton {...music} />}
         <span className="counter">{Math.min(pos + 1, queue.length)} / {queue.length}</span>
       </header>
       <div className="progress">
