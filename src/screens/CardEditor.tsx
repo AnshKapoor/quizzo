@@ -8,6 +8,7 @@ import { CARD_HELP } from '../lib/help';
 import { Help } from './Help';
 import { ImageField } from '../components/ImageField';
 import { imageFromTransfer, imageToDataUrl } from '../lib/image';
+import { Field } from '../components/common';
 
 interface Props {
   deck: Deck;
@@ -39,20 +40,24 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
   const set = <K extends keyof CardForm>(k: K, v: CardForm[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   const text = (k: keyof CardForm, label: string, opts: { rows?: number; placeholder?: string; help?: string } = {}) => (
-    <label className="field">
-      <span>{label}</span>
+    <Field label={label} help={opts.help}>
       {opts.rows ? (
         <textarea
           rows={opts.rows}
+          aria-label={label}
           value={form[k] as string}
           placeholder={opts.placeholder}
           onChange={(e) => set(k, e.target.value)}
         />
       ) : (
-        <input value={form[k] as string} placeholder={opts.placeholder} onChange={(e) => set(k, e.target.value)} />
+        <input
+          aria-label={label}
+          value={form[k] as string}
+          placeholder={opts.placeholder}
+          onChange={(e) => set(k, e.target.value)}
+        />
       )}
-      {opts.help && <small>{opts.help}</small>}
-    </label>
+    </Field>
   );
 
   const check = (k: 'shuffle' | 'caseSensitive' | 'wordBank', label: string) => (
@@ -63,6 +68,12 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
 
   /** Help is shown in place of the editor, so what has been typed is kept. */
   const [helpTopic, setHelpTopic] = useState<string | null>(null);
+  /** Narrow screens show the form and the preview one at a time. */
+  const [tab, setTab] = useState<'form' | 'preview'>('form');
+  /** The optional extras start open only when the card already uses one of them. */
+  const [hadExtras] = useState(
+    () => !!(form.image || form.hint || form.hintImage || form.explanation || form.tags || form.time),
+  );
   const help = CARD_HELP[form.type];
   const isEmpty = JSON.stringify(form) === JSON.stringify(emptyForm(form.type));
   const fillExample = () => {
@@ -105,7 +116,23 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
         <strong>{card ? 'Edit card' : 'New card'}</strong>
       </header>
 
-      <div className="editor-grid">
+      <div className="segmented editor-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'form'} className={`chip ${tab === 'form' ? 'active' : ''}`} onClick={() => setTab('form')}>
+          Edit
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'preview'}
+          data-tour="preview"
+          className={`chip ${tab === 'preview' ? 'active' : ''}`}
+          onClick={() => setTab('preview')}
+        >
+          Preview
+        </button>
+      </div>
+
+      <div className={`editor-grid show-${tab}`}>
         <form
           className="editor-form"
           onPaste={pasteImage}
@@ -129,7 +156,7 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
             </select>
           </label>
 
-          <details className="help-box" open={!card}>
+          <details className="help-box" data-tour="editor-help">
             <summary>How to write a {CARD_TYPE_LABELS[form.type].toLowerCase()} card</summary>
             <p>{help.summary}</p>
             <p className="sub">Good for: {help.goodFor}</p>
@@ -286,41 +313,46 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
             </>
           )}
 
-          <ImageField
-            label="Question picture (optional)"
-            value={form.image}
-            onChange={(v) => set('image', v)}
-            help="Shown with the question or instruction. Tip: paste a picture while typing the question and it lands here."
-          />
-          <div data-image-target="hint" className="hint-group">
-            {text('hint', 'Hint (optional)')}
-            <ImageField
-              label="Hint picture (optional)"
-              value={form.hintImage}
-              onChange={(v) => set('hintImage', v)}
-              help="Shown when the learner presses Show hint (on flashcards: before revealing)."
-            />
-          </div>
-          {text('explanation', 'Explanation shown after answering (optional)', { rows: 2 })}
-          {text('tags', 'Tags', { placeholder: 'A1, verbs' })}
-          <label className="field time-field">
-            <span>Time in quizzes (seconds)</span>
-            <input
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={form.time}
-              placeholder={`${defaultTime} (default)`}
-              onChange={(e) => set('time', e.target.value)}
-            />
-            <small>
-              How long this question gets in the deck Quiz and in timed quizzes. Leave empty to use the default ({defaultTime} s), which you can
-              change in Settings. Study (review) has no clock.
-            </small>
-          </label>
+          <details className="fold" data-tour="more-options" open={hadExtras}>
+            <summary>More options: picture, hint, tags, time</summary>
+            <div className="fold-body">
+              <ImageField
+                label="Question picture"
+                value={form.image}
+                onChange={(v) => set('image', v)}
+                help="Shown with the question or instruction. Tip: paste a picture while typing the question and it lands here."
+              />
+              <div data-image-target="hint" className="hint-group">
+                {text('hint', 'Hint')}
+                <ImageField
+                  label="Hint picture"
+                  value={form.hintImage}
+                  onChange={(v) => set('hintImage', v)}
+                  help="Shown when the learner presses Show hint (on flashcards: before revealing)."
+                />
+              </div>
+              {text('explanation', 'Explanation shown after answering', { rows: 2 })}
+              {text('tags', 'Tags', { placeholder: 'A1, verbs', help: 'Comma separated. Timed quizzes can pick cards by tag.' })}
+              <Field
+                label="Time in quizzes (seconds)"
+                className="time-field"
+                help={`How long this question gets in the deck Quiz and in timed quizzes. Leave empty to use the default (${defaultTime} s), which you can change in Settings. Study (review) has no clock.`}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  aria-label="Time in quizzes (seconds)"
+                  value={form.time}
+                  placeholder={`${defaultTime} (default)`}
+                  onChange={(e) => set('time', e.target.value)}
+                />
+              </Field>
+            </div>
+          </details>
 
-          {result.error && <p className="error">⚠ {result.error}</p>}
-          <div className="row">
+          {result.error && !isEmpty && <p className="error">⚠ {result.error}</p>}
+          <div className="row editor-actions">
             <button type="submit" className="primary" disabled={!result.card}>
               Save
             </button>
@@ -335,7 +367,7 @@ export function CardEditor({ deck, card, type, defaultTime, onSave, onCancel }: 
           </div>
         </form>
 
-        <aside className="preview">
+        <aside className="preview" data-tour="preview">
           <div className="sub">Live preview — try it</div>
           {previewItems.length > 1 && (
             <div className="row wrap">

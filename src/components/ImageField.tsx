@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { imageFromTransfer, imageKb, imageToDataUrl } from '../lib/image';
 import { useImageSrc } from './ImageContext';
+import { Field } from './common';
 
 interface Props {
   label: string;
@@ -27,8 +28,7 @@ export function ImageField({ label, value, onChange, help }: Props) {
   };
 
   return (
-    <div className="field image-field">
-      <span>{label}</span>
+    <Field label={label} help={help} className="image-field">
       {value ? (
         <div className="image-preview">
           {src ? <img src={src} alt="" /> : <small className="error">⚠ Picture missing</small>}
@@ -74,7 +74,7 @@ export function ImageField({ label, value, onChange, help }: Props) {
             take(imageFromTransfer(e.dataTransfer));
           }}
         >
-          🖼 Paste a picture (Ctrl+V), drop one here, or <u>choose a file</u>
+          🖼 <u>Choose a picture</u>, or paste or drop one here
         </div>
       )}
       <input
@@ -87,8 +87,7 @@ export function ImageField({ label, value, onChange, help }: Props) {
           e.target.value = '';
         }}
       />
-      {help && <small>{help}</small>}
       {error && <small className="error">⚠ {error}</small>}
-    </div>
+    </Field>
   );
 }

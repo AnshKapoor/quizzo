@@ -27,27 +27,33 @@ export function Home(p: Props) {
 
   return (
     <div className="screen">
-      <header className="hero">
-        <div>
+      <header className="bar app-bar">
+        <div className="brand">
           <h1>Quizzo</h1>
           <p className="sub">Flashcards that quiz you back.</p>
         </div>
         <div className="row">
-          <button type="button" className="primary" onClick={onNewDeck}>
+          <button type="button" className="primary fab" data-tour="new-deck" onClick={onNewDeck}>
             + New deck
           </button>
-          <button type="button" onClick={() => fileInput.current?.click()}>
-            Import
-          </button>
-          <button type="button" onClick={p.onBackup}>
-            ☁ Backup
-          </button>
-          <button type="button" className="ghost" onClick={p.onAppearance}>
-            ⚙ Settings
-          </button>
-          <button type="button" className="ghost" onClick={() => onHelp()}>
-            ? Help
-          </button>
+          <div className="row tools" data-tour="tools">
+            <button type="button" className="bar-btn" title="Import a deck file" aria-label="Import a deck file" onClick={() => fileInput.current?.click()}>
+              <span aria-hidden="true">⤒</span>
+              <span className="label">Import</span>
+            </button>
+            <button type="button" className="bar-btn" title="Backup" aria-label="Backup" onClick={p.onBackup}>
+              <span aria-hidden="true">☁</span>
+              <span className="label">Backup</span>
+            </button>
+            <button type="button" className="bar-btn" title="Settings" aria-label="Settings" onClick={p.onAppearance}>
+              <span aria-hidden="true">⚙</span>
+              <span className="label">Settings</span>
+            </button>
+            <button type="button" className="bar-btn" title="Help" aria-label="Help" onClick={() => onHelp()}>
+              <span aria-hidden="true">?</span>
+              <span className="label">Help</span>
+            </button>
+          </div>
           <input
             ref={fileInput}
             type="file"
@@ -88,7 +94,7 @@ export function Home(p: Props) {
               ?
             </button>
             <span className="spacer" />
-            <button type="button" onClick={p.onNewCustomQuiz}>
+            <button type="button" data-tour="custom" onClick={p.onNewCustomQuiz}>
               + New custom quiz
             </button>
           </div>
@@ -153,12 +159,14 @@ export function Home(p: Props) {
 
       {library.decks.length > 0 && <h2 className="decks-head">Decks</h2>}
       <div className="deck-grid">
-        {library.decks.map((d) => {
+        {library.decks.map((d, i) => {
           const s = deckStats(d, library);
+          // The first-run tour points at the first deck.
+          const tour = (name: string) => (i === 0 ? name : undefined);
           const reviewable = s.due + Math.min(s.fresh, 10);
           return (
             <article key={d.id} className="deck-tile">
-              <button type="button" className="deck-head" onClick={() => onOpen(d.id)}>
+              <button type="button" className="deck-head" data-tour={tour('deck')} onClick={() => onOpen(d.id)}>
                 <span className="lang">{d.language.target.toUpperCase()}</span>
                 <h2>{d.title}</h2>
                 {d.description && <p>{d.description}</p>}
@@ -172,12 +180,13 @@ export function Home(p: Props) {
                 <button
                   type="button"
                   className="primary"
+                  data-tour={tour('study')}
                   disabled={reviewable === 0}
                   onClick={() => onStudy(d.id, 'review')}
                 >
                   {reviewable ? `Study (${reviewable})` : 'All caught up ✓'}
                 </button>
-                <button type="button" disabled={!s.total} onClick={() => onStudy(d.id, 'quiz')}>
+                <button type="button" data-tour={tour('quiz')} disabled={!s.total} onClick={() => onStudy(d.id, 'quiz')}>
                   Quiz
                 </button>
                 <button type="button" className="ghost" onClick={() => onOpen(d.id)}>

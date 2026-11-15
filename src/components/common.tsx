@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { canSpeak, speak } from '../lib/speech';
 
 export function SpeakButton({ text, lang }: { text: string; lang: string }) {
@@ -53,4 +53,43 @@ export function Feedback({ correct, children }: { correct: boolean; children?: R
 
 export function Explanation({ text }: { text?: string }) {
   return text ? <p className="explanation">💡 {text}</p> : null;
+}
+
+/**
+ * A labelled form field. Its help text stays hidden behind a small "?" next to the label,
+ * so a form shows only the inputs until someone asks for the explanation.
+ */
+export function Field({
+  label,
+  help,
+  className = '',
+  children,
+}: {
+  label: string;
+  help?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`field ${className}`}>
+      <span className="field-label">
+        {label}
+        {help && (
+          <button
+            type="button"
+            className="icon-btn help-link tip-btn"
+            aria-expanded={open}
+            aria-label={`About: ${label}`}
+            title="What is this?"
+            onClick={() => setOpen((o) => !o)}
+          >
+            ?
+          </button>
+        )}
+      </span>
+      {children}
+      {help && open && <small className="field-help">{help}</small>}
+    </div>
+  );
 }

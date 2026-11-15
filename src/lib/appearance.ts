@@ -6,7 +6,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   theme: 'auto',
   font: 'sans',
   size: 'm',
-  layout: 'center',
+  layout: 'top-center',
   cards: 'raised',
 };
 
@@ -37,7 +37,7 @@ export const SIZES: { id: Appearance['size']; label: string }[] = [
 ];
 
 export const LAYOUTS: { id: Appearance['layout']; label: string; text: string }[] = [
-  { id: 'center', label: 'Centred', text: 'Question in the middle of the screen, text centred.' },
+  { id: 'center', label: 'Centred', text: 'Question a little above the middle of the screen, text centred.' },
   { id: 'top-center', label: 'Top, centred', text: 'Question at the top, text centred.' },
   { id: 'left', label: 'Top, left', text: 'Question at the top, text aligned left.' },
 ];

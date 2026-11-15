@@ -104,7 +104,7 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
   return (
     <div className="screen study">
       <header className="bar">
-        <button type="button" className="ghost" onClick={onExit}>
+        <button type="button" className="ghost back" onClick={onExit}>
           ← {deck.title}
         </button>
         <span className="mode-pill">{mode === 'review' ? 'Review' : '⏱ Quiz'}</span>

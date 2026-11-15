@@ -9,8 +9,8 @@ function fullHeight(): number {
 }
 
 /**
- * Holds the question while studying. With the "Centred" placement it puts the question in the
- * middle of the screen, but decides the position once per question (`resetKey`): a keyboard
+ * Holds the question while studying. With the "Centred" placement it puts the question a little
+ * above the middle of the screen, but decides the position once per question (`resetKey`): a keyboard
  * opening or feedback appearing must not make the question jump while it is being answered.
  */
 export function Stage({ resetKey, children }: { resetKey: string; children: ReactNode }) {
@@ -25,7 +25,8 @@ export function Stage({ resetKey, children }: { resetKey: string; children: Reac
       const top = el.getBoundingClientRect().top + window.scrollY;
       const bottomGap = 48; // room for the screen's bottom padding
       const free = fullHeight() - top - el.offsetHeight - bottomGap;
-      el.style.paddingTop = `${Math.max(0, Math.round(free * 0.45))}px`;
+      // Upper third rather than dead centre: on a phone the question should not start far down the screen.
+      el.style.paddingTop = `${Math.max(0, Math.round(free * 0.3))}px`;
     };
     place();
     // Re-place on rotation / window width changes, not when the keyboard changes the height.

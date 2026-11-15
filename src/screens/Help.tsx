@@ -11,6 +11,8 @@ interface Props {
   onBack: () => void;
   /** Adds a deck with one example of every card type (button hidden when not given). */
   onAddExampleDeck?: () => void;
+  /** Shows the first-run tour again (button hidden when not given). */
+  onReplayTour?: () => void;
 }
 
 const TYPES = Object.keys(CARD_TYPE_LABELS) as CardType[];
@@ -61,7 +63,7 @@ function Example({ card }: { card: Card }) {
   );
 }
 
-export function Help({ topic, onBack, onAddExampleDeck }: Props) {
+export function Help({ topic, onBack, onAddExampleDeck, onReplayTour }: Props) {
   const [open, setOpen] = useState<string | null>(TYPES.includes(topic as CardType) ? topic! : null);
 
   useEffect(() => {
@@ -78,6 +80,13 @@ export function Help({ topic, onBack, onAddExampleDeck }: Props) {
           ← Back
         </button>
         <strong>Help</strong>
+        {onReplayTour ? (
+          <button type="button" className="ghost" onClick={onReplayTour}>
+            Show the tour
+          </button>
+        ) : (
+          <span />
+        )}
       </header>
 
       <nav className="help-toc" aria-label="Help topics">

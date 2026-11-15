@@ -28,6 +28,7 @@ import { Help } from './screens/Help';
 import { Backup } from './screens/Backup';
 import { normalizeImages } from './lib/image';
 import { ImagesContext } from './components/ImageContext';
+import { resetTours, Tour, type TourId } from './components/Tour';
 import { backupPayload, CloudClient, defaultDeviceName, fingerprint } from './lib/cloud';
 
 /** Auto backup waits this long after the last change, so a study session isn't uploaded answer by answer. */
@@ -195,6 +196,10 @@ export default function App() {
       <Help
         topic={view.topic}
         onBack={() => setView(view.from)}
+        onReplayTour={() => {
+          resetTours();
+          home();
+        }}
         onAddExampleDeck={() => {
           const id = uid('deck-');
           update((l) => L.upsertDeck(l, exampleDeck(id)));
@@ -303,10 +308,18 @@ export default function App() {
     );
   }
 
+  // A new key replays the entrance animation, so moving between screens is not an abrupt swap.
+  const viewKey = `${view.name}-${'deckId' in view ? view.deckId : ''}`;
+  const tours: Partial<Record<View['name'], TourId>> = { home: 'home', deck: 'deck', edit: 'editor' };
+  const tour = view.name === 'home' || deck ? tours[view.name] : undefined;
+
   return (
     <ImagesContext.Provider value={lib.images}>
       {saveError && <div className="banner error">Could not save: {saveError}</div>}
-      {screen}
+      <div key={viewKey} className="view">
+        {screen}
+      </div>
+      {tour && <Tour key={tour} id={tour} />}
     </ImagesContext.Provider>
   );
 }

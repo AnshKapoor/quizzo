@@ -167,7 +167,7 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   return (
     <div className="screen study timed">
       <header className="bar">
-        <button type="button" className="ghost" onClick={leave}>
+        <button type="button" className="ghost back" onClick={leave}>
           ← {backLabel}
         </button>
         <span className="mode-pill">⏱ {quiz.title}</span>
