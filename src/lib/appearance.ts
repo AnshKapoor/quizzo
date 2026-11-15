@@ -18,7 +18,13 @@ export const THEMES: { id: ThemeId; label: string; swatch: [string, string, stri
   { id: 'sepia', label: 'Sepia', swatch: ['#f3ead8', '#fbf6ea', '#9a5b13'] },
   { id: 'ocean', label: 'Ocean', swatch: ['#e8f1f8', '#ffffff', '#0b7a8f'] },
   { id: 'forest', label: 'Forest', swatch: ['#eaf1e6', '#fafcf8', '#2f7d3b'] },
+  { id: 'sky', label: 'Sky', swatch: ['#e4f5ff', '#ffffff', '#0b74c4'] },
+  { id: 'rose', label: 'Rose', swatch: ['#fbeef1', '#ffffff', '#c2255c'] },
+  { id: 'lavender', label: 'Lavender', swatch: ['#f1eefb', '#ffffff', '#6741d9'] },
+  { id: 'sunset', label: 'Sunset', swatch: ['#fff1e6', '#fffaf5', '#c2410c'] },
   { id: 'midnight', label: 'Midnight', swatch: ['#0f1226', '#191d38', '#b48cff'] },
+  { id: 'arctic', label: 'Arctic', swatch: ['#2e3440', '#3b4252', '#88c0d0'] },
+  { id: 'coffee', label: 'Coffee', swatch: ['#1f1a17', '#2a231f', '#e0a458'] },
   { id: 'contrast', label: 'High contrast', swatch: ['#000000', '#000000', '#ffd400'] },
 ];
 
@@ -27,6 +33,10 @@ export const FONTS: { id: Appearance['font']; label: string }[] = [
   { id: 'serif', label: 'Serif' },
   { id: 'wide', label: 'Wide' },
   { id: 'mono', label: 'Typewriter' },
+  { id: 'rounded', label: 'Rounded' },
+  { id: 'clear', label: 'Clear' },
+  { id: 'elegant', label: 'Elegant' },
+  { id: 'playful', label: 'Playful' },
 ];
 
 export const SIZES: { id: Appearance['size']; label: string }[] = [

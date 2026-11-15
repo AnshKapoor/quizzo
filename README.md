@@ -50,7 +50,7 @@ Android, allow installing from your browser or file manager when asked.
 - **Backup to your own Google Sheet** and restore on any device; each device keeps one latest backup, and you can
   save named backups on the side. Also available as a single backup file.
 - **Share decks** as `.json` files ([format](docs/deck-format.md)).
-- **Make it yours**: 8 themes, fonts, text size and card styles.
+- **Make it yours**: 14 themes, 8 fonts, text size and card styles.
 - A short **guided tour** on first start shows where everything is.
 
 ## Card types

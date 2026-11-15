@@ -210,12 +210,14 @@ export interface CustomQuiz extends QuizPreset {
   picks: { deckId: string; cardId: string }[];
 }
 
-export type ThemeId = 'auto' | 'light' | 'dark' | 'sepia' | 'ocean' | 'forest' | 'midnight' | 'contrast';
+export type ThemeId =
+  | 'auto' | 'light' | 'dark' | 'sepia' | 'ocean' | 'forest' | 'midnight' | 'contrast'
+  | 'sky' | 'rose' | 'lavender' | 'sunset' | 'arctic' | 'coffee';
 
 /** How the app looks. Stored with the library so a backup restores it. */
 export interface Appearance {
   theme: ThemeId;
-  font: 'sans' | 'serif' | 'wide' | 'mono';
+  font: 'sans' | 'serif' | 'wide' | 'mono' | 'rounded' | 'clear' | 'elegant' | 'playful';
   size: 's' | 'm' | 'l' | 'xl';
   /** Where questions sit while studying: middle of the screen, top with centred text, or top left. */
   layout: 'top-center' | 'left';
