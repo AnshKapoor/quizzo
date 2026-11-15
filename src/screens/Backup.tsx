@@ -23,8 +23,8 @@ import { lastChange, mergeLibraries, newer, type Conflict, type Side } from '../
 interface Props {
   library: Library;
   update: (fn: (l: Library) => Library) => void;
-  /** Runs a cloud backup of the current library (shared with auto backup). */
-  onBackupNow: () => Promise<CloudBackupInfo>;
+  /** Runs a cloud backup of the current library (shared with auto backup). A name saves it as a separate backup. */
+  onBackupNow: (name?: string) => Promise<CloudBackupInfo>;
   /** Last auto-backup problem, if any. */
   autoError: string | null;
   onHelp: () => void;
@@ -67,6 +67,8 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
   /** Conflicts found when merging the pending backup, with the side chosen for each. */
   const [conflicts, setConflicts] = useState<{ list: Conflict[]; choices: Record<string, Side> } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  /** Name typed for a separate, named backup. */
+  const [backupName, setBackupName] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
   const summary = librarySummary(library);
 
@@ -127,9 +129,27 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
   const backupNow = () =>
     run('Backing up…', async () => {
       const b = await onBackupNow();
-      setBackups((list) => [b, ...(list ?? [])].slice(0, 20));
+      setBackups(await new CloudClient(cloud!).list());
       setMessage({ kind: 'ok', text: `Backed up ${b.decks} deck(s), ${b.cards} card(s) at ${when(b.created)}.` });
     });
+
+  const backupNamed = () =>
+    run('Saving named backup…', async () => {
+      const b = await onBackupNow(backupName.trim());
+      setBackups(await new CloudClient(cloud!).list());
+      setBackupName('');
+      setMessage({ kind: 'ok', text: `Saved "${b.name}" as a separate backup. It stays until you delete it.` });
+    });
+
+  const deleteBackup = (b: CloudBackupInfo) => {
+    const label = b.name ? `"${b.name}"` : `the latest backup from ${b.device}`;
+    if (!confirm(`Delete ${label} (${when(b.created)}) from the Sheet? This cannot be undone.`)) return;
+    run('Deleting…', async () => {
+      const client = new CloudClient(cloud!);
+      await client.remove(b.id);
+      setBackups(await client.list());
+    });
+  };
 
   const askRestore = (label: string, json: string) => {
     const { library: lib, errors } = parseLibraryBackup(json);
@@ -362,6 +382,25 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
                 ↻ Refresh list
               </button>
             </div>
+            <small className="sub">Replaces this device's previous backup, so the Sheet always holds one latest copy per device.</small>
+            <form
+              className="row wrap link-row"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (backupName.trim() && !busy) backupNamed();
+              }}
+            >
+              <input
+                value={backupName}
+                maxLength={60}
+                placeholder="Name, e.g. Before the exam"
+                aria-label="Name for a separate backup"
+                onChange={(e) => setBackupName(e.target.value)}
+              />
+              <button type="submit" disabled={!backupName.trim() || !!busy}>
+                Save as separate backup
+              </button>
+            </form>
             <label className="check">
               <input type="checkbox" checked={!!cloud.auto} onChange={(e) => setCloud({ auto: e.target.checked })} />
               Back up automatically (about half a minute after changes, while Quizzo is open)
@@ -387,25 +426,45 @@ export function Backup({ library, update, onBackupNow, autoError, onHelp, onBack
                 {backups.map((b) => (
                   <li key={b.id}>
                     <span className="backup-meta">
-                      <strong>{when(b.created)}</strong>
+                      <strong>{b.name || `Latest from ${b.device}`}</strong>
                       <small className="sub">
-                        {b.device} · {b.decks} deck(s), {b.cards} card(s)
+                        {when(b.created)}
+                        {b.name ? ` · ${b.device}` : ''} · {b.decks} deck(s), {b.cards} card(s)
                       </small>
                     </span>
-                    <button type="button" disabled={!!busy} onClick={() => restoreCloud(b)}>
-                      Restore…
-                    </button>
+                    <span className="row">
+                      <button type="button" disabled={!!busy} onClick={() => restoreCloud(b)}>
+                        Restore…
+                      </button>
+                      {scriptVersion !== null && scriptVersion >= 3 && (
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          title="Delete this backup"
+                          aria-label={`Delete ${b.name || `the latest backup from ${b.device}`}`}
+                          disabled={!!busy}
+                          onClick={() => deleteBackup(b)}
+                        >
+                          🗑
+                        </button>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
-            <small className="sub">The Sheet keeps the 20 newest backups.</small>
+            <small className="sub">
+              Each device has one latest backup, replaced every time it backs up. Named backups stay until you delete
+              them (the Sheet keeps the newest 20).
+            </small>
 
             {scriptVersion !== null && scriptVersion < SCRIPT_VERSION && (
               <div className="notice">
-                <strong>Update the script in your Sheet for much smaller backups.</strong> The script there is
-                version {scriptVersion}; it stores every picture again in every backup. Version {SCRIPT_VERSION} stores
-                each picture once and only uploads new ones. Backups keep working either way.
+                <strong>Update the script in your Sheet to stop backups piling up.</strong> The script there is
+                version {scriptVersion}: it adds a new backup every time instead of replacing the latest one
+                {scriptVersion < 2 ? ', and stores every picture again in every backup' : ''}. Version {SCRIPT_VERSION}{' '}
+                keeps one latest backup per device, tidies up the repeated ones on the next backup, and adds named
+                backups. Backups keep working either way.
                 <ol>
                   <li>
                     <button type="button" onClick={() => flashCopied('update', appsScript(cloud.key))}>

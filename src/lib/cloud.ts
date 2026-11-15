@@ -144,6 +144,8 @@ export interface CloudBackupInfo {
   device: string;
   decks: number;
   cards: number;
+  /** Set for backups saved under a name; empty for a device's "latest" backup, which is replaced each time. */
+  name?: string;
 }
 
 type Http = (url: string, init: { method: 'GET' | 'POST'; body?: string }) => Promise<{ status: number; text: string }>;
@@ -239,7 +241,7 @@ export class CloudClient {
     return r;
   }
 
-  /** Version of the script in the Sheet (1 = stores pictures inside every backup). */
+  /** Version of the script in the Sheet (1 = stores pictures inside every backup, 2 = adds a row for every backup). */
   async scriptVersion(): Promise<number> {
     if (this.version === undefined) await this.ping();
     return this.version!;
@@ -279,11 +281,22 @@ export class CloudClient {
     return JSON.stringify({ ...rest, images });
   }
 
+  /** Removes one backup from the Sheet (script version 3). */
+  async remove(id: string): Promise<void> {
+    await this.call({ action: 'delete', id });
+  }
+
   /**
-   * Backs up the library. With script version 2 the pictures go into their own tab, each uploaded once:
-   * only pictures the Sheet doesn't have yet are sent, and the backup itself just lists their names.
+   * Backs up the library. Without a `name` this replaces the device's previous latest backup
+   * (script version 3; older scripts add a row every time). With a `name` it is saved as a
+   * separate backup that stays until it is deleted.
+   *
+   * With script version 2+ the pictures go into their own tab, each uploaded once: only pictures
+   * the Sheet doesn't have yet are sent, and the backup itself just lists their names.
    */
-  async save(lib: Library, device: string): Promise<CloudBackupInfo> {
+  async save(lib: Library, device: string, name?: string): Promise<CloudBackupInfo> {
+    if (name && (await this.scriptVersion()) < 3)
+      throw new CloudError('Named backups need the newer script in your Sheet. Update it (see "Update the script" below), then try again.');
     const s = librarySummary(lib);
     const full = JSON.parse(stampedBackup(lib, device));
     const images: Record<string, string> = full.images ?? {};
@@ -308,7 +321,7 @@ export class CloudClient {
       const { images: _img, ...rest } = full;
       data = JSON.stringify({ ...rest, imageIds: Object.keys(images) });
     } else data = JSON.stringify(full);
-    return (await this.call<{ backup: CloudBackupInfo }>({ action: 'save' }, { device, ...s, data })).backup;
+    return (await this.call<{ backup: CloudBackupInfo }>({ action: 'save' }, { device, name: name || '', ...s, data })).backup;
   }
 }
 
@@ -327,7 +340,7 @@ export function defaultDeviceName(): string {
 
 // ---- the script that runs inside the user's Google Sheet ----
 
-export const SCRIPT_VERSION = 2;
+export const SCRIPT_VERSION = 3;
 
 /** Google Apps Script source. KEY is filled in per user. */
 export function appsScript(key: string): string {
@@ -338,9 +351,12 @@ const APPS_SCRIPT = `// Quizzo cloud backup (script version ${SCRIPT_VERSION}).
 // Paste this into Extensions > Apps Script of a Google Sheet, then
 // Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).
 // Backups are stored in the "Quizzo backups" tab of this Sheet. Don't edit that tab by hand.
+// Each device has one "latest" backup, replaced every time it backs up. Backups saved under a
+// name are kept separately until they are deleted.
 
 const KEY = '__KEY__';  // must match the key in the Quizzo app
-const KEEP = 20;        // how many backups to keep
+const KEEP = 20;        // how many named backups to keep
+const COLS = 9;         // columns in the backups tab
 const CHUNK = 40000;    // characters per cell (a cell holds at most 50,000)
 const DATA_TAB = 'Quizzo backups';
 const INFO_TAB = 'Quizzo';
@@ -364,6 +380,7 @@ function handle_(p, body) {
     else if (p.action === 'list') result = { backups: list_() };
     else if (p.action === 'get') result = { data: get_(String(p.id)) };
     else if (p.action === 'save' && body) result = { backup: save_(body) };
+    else if (p.action === 'delete') result = { deleted: delete_(String(p.id)) };
     else if (p.action === 'imageIds') result = { ids: imageIds_() };
     else if (p.action === 'putImages' && body) result = { stored: putImages_(body.images || {}) };
     else if (p.action === 'getImages' && body) result = { images: getImages_(body.ids || []) };
@@ -380,7 +397,7 @@ function dataSheet_() {
   let sh = ss.getSheetByName(DATA_TAB);
   if (!sh) {
     sh = ss.insertSheet(DATA_TAB);
-    sh.getRange(1, 1, 1, 8).setValues([['id', 'created', 'device', 'decks', 'cards', 'part', 'parts', 'data']]);
+    sh.getRange(1, 1, 1, COLS).setValues([['id', 'created', 'device', 'decks', 'cards', 'part', 'parts', 'data', 'name']]);
     sh.setFrozenRows(1);
   }
   return sh;
@@ -389,7 +406,15 @@ function dataSheet_() {
 function rows_() {
   const sh = dataSheet_();
   const n = sh.getLastRow() - 1;
-  return n > 0 ? sh.getRange(2, 1, n, 8).getValues() : [];
+  return n > 0 ? sh.getRange(2, 1, n, COLS).getValues() : [];
+}
+
+/** Replaces the stored rows with \`kept\` (a subset of \`all\`). */
+function writeRows_(sh, all, kept) {
+  if (kept.length === all.length) return false;
+  sh.getRange(2, 1, all.length, COLS).clearContent();
+  if (kept.length) sh.getRange(2, 1, kept.length, COLS).setNumberFormat('@').setValues(kept);
+  return true;
 }
 
 function list_() {
@@ -399,7 +424,7 @@ function list_() {
     const id = String(r[0]);
     if (!id || seen[id]) return;
     seen[id] = true;
-    out.push({ id: id, created: Number(r[1]), device: String(r[2]), decks: Number(r[3]), cards: Number(r[4]), row: row });
+    out.push({ id: id, created: Number(r[1]), device: String(r[2]), decks: Number(r[3]), cards: Number(r[4]), name: String(r[8] || ''), row: row });
   });
   // Newest first; rows further down were added later (ties when two backups land in the same millisecond).
   out.sort(function (a, b) { return b.created - a.created || b.row - a.row; });
@@ -425,18 +450,33 @@ function save_(b) {
     const created = Date.now();
     const id = created.toString(36) + Math.random().toString(36).slice(2, 6);
     const device = String(b.device || 'Unknown').slice(0, 60);
+    const name = String(b.name || '').trim().slice(0, 60);
     const decks = Number(b.decks) || 0;
     const cards = Number(b.cards) || 0;
     const pieces = [];
     for (let i = 0; i < data.length || i === 0; i += CHUNK) pieces.push(data.slice(i, i + CHUNK));
-    const values = pieces.map(function (piece, i) { return [id, created, device, decks, cards, i + 1, pieces.length, '|' + piece]; });
+    const values = pieces.map(function (piece, i) { return [id, created, device, decks, cards, i + 1, pieces.length, '|' + piece, name]; });
     const start = sh.getLastRow() + 1;
-    const range = sh.getRange(start, 1, values.length, 8);
+    const range = sh.getRange(start, 1, values.length, COLS);
     range.setNumberFormat('@');
     range.setValues(values);
     prune_(sh);
     writeInfo_(created, device, decks, cards, b.titles);
-    return { id: id, created: created, device: device, decks: decks, cards: cards };
+    return { id: id, created: created, device: device, decks: decks, cards: cards, name: name };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function delete_(id) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const sh = dataSheet_();
+    const all = rows_();
+    const changed = writeRows_(sh, all, all.filter(function (r) { return String(r[0]) !== id; }));
+    if (changed && SpreadsheetApp.getActiveSpreadsheet().getSheetByName(IMG_TAB)) pruneImages_();
+    return changed;
   } finally {
     lock.releaseLock();
   }
@@ -535,15 +575,22 @@ function pruneImages_() {
   if (kept.length) sh.getRange(2, 1, kept.length, 5).setNumberFormat('@').setValues(kept);
 }
 
+/** Keeps the newest unnamed backup of each device (its "latest") and the newest KEEP named ones. */
 function prune_(sh) {
   const keep = {};
-  list_().slice(0, KEEP).forEach(function (b) { keep[b.id] = true; });
+  const latest = {};
+  let named = 0;
+  list_().forEach(function (b) {
+    if (b.name) {
+      if (named++ < KEEP) keep[b.id] = true;
+    } else if (!latest[b.device]) {
+      latest[b.device] = true;
+      keep[b.id] = true;
+    }
+  });
   const all = rows_();
-  const kept = all.filter(function (r) { return keep[String(r[0])]; });
-  if (kept.length === all.length) return;
-  sh.getRange(2, 1, all.length, 8).clearContent();
-  if (kept.length) sh.getRange(2, 1, kept.length, 8).setNumberFormat('@').setValues(kept);
-  if (SpreadsheetApp.getActiveSpreadsheet().getSheetByName(IMG_TAB)) pruneImages_();
+  const changed = writeRows_(sh, all, all.filter(function (r) { return keep[String(r[0])]; }));
+  if (changed && SpreadsheetApp.getActiveSpreadsheet().getSheetByName(IMG_TAB)) pruneImages_();
 }
 
 function writeInfo_(created, device, decks, cards, titles) {

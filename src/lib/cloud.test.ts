@@ -138,14 +138,55 @@ describe('Google Sheet backup', () => {
     expect(JSON.stringify(sheets['Quizzo'].cells)).toContain('/exec?key=k1');
   });
 
-  it('keeps only the newest 20 backups, newest first', async () => {
+  it('replaces a device\'s latest backup instead of adding another one', async () => {
     const { http } = fakeScript('k1');
     const client = new CloudClient(conn, http);
-    for (let i = 0; i < 23; i++) await client.save(lib([deck(`d${i}`)]), `PC ${i}`);
+    for (let i = 0; i < 5; i++) await client.save(lib([deck(`d${i}`)]), 'Phone');
+    await client.save(lib([deck('pc')]), 'PC');
+    await client.save(lib([deck('pc2')]), 'PC');
     const list = await client.list();
-    expect(list).toHaveLength(20);
-    const newest = parseLibraryBackup(await client.get(list[0].id)).library!;
-    expect(newest.decks[0].id).toBe('d22');
+    // One latest backup per device, newest first.
+    expect(list.map((b) => b.device)).toEqual(['PC', 'Phone']);
+    expect(parseLibraryBackup(await client.get(list[0].id)).library!.decks[0].id).toBe('pc2');
+    expect(parseLibraryBackup(await client.get(list[1].id)).library!.decks[0].id).toBe('d4');
+  });
+
+  it('keeps named backups separately until they are deleted, at most the newest 20', async () => {
+    const { http } = fakeScript('k1');
+    const client = new CloudClient(conn, http);
+    const named = await client.save(lib([deck('exam')]), 'PC', 'Before the exam');
+    expect(named.name).toBe('Before the exam');
+    await client.save(lib([deck('a')]), 'PC');
+    await client.save(lib([deck('b')]), 'PC');
+    let list = await client.list();
+    expect(list.map((b) => b.name)).toEqual(['', 'Before the exam']);
+    expect(parseLibraryBackup(await client.get(named.id)).library!.decks[0].id).toBe('exam');
+
+    await client.remove(named.id);
+    list = await client.list();
+    expect(list.map((b) => b.name)).toEqual(['']);
+    await expect(client.get(named.id)).rejects.toThrow(/not found/);
+
+    for (let i = 0; i < 23; i++) await client.save(lib([deck(`n${i}`)]), 'PC', `Named ${i}`);
+    list = await client.list();
+    expect(list.filter((b) => b.name)).toHaveLength(20);
+    expect(list.filter((b) => !b.name)).toHaveLength(1);
+    expect(list[0].name).toBe('Named 22');
+  });
+
+  it('tidies up the repeated backups an older script left behind', async () => {
+    const { sheets, http } = fakeScript('k1');
+    const client = new CloudClient(conn, http);
+    await client.save(lib([deck('first')]), 'PC');
+    // Rows as script version 2 wrote them: 8 columns, one backup per save.
+    const sheet = sheets['Quizzo backups'];
+    const row = sheet.cells[1];
+    for (let i = 0; i < 6; i++) sheet.cells.push([`old${i}`, Number(row[1]) - 1000 - i, 'PC', 1, 1, 1, 1, row[7]]);
+    expect(await client.list()).toHaveLength(7);
+    await client.save(lib([deck('now')]), 'PC');
+    const list = await client.list();
+    expect(list).toHaveLength(1);
+    expect(parseLibraryBackup(await client.get(list[0].id)).library!.decks[0].id).toBe('now');
   });
 
   it('rejects a wrong key and stores values Sheets could misread as text', async () => {
@@ -290,18 +331,20 @@ describe('pictures in backups', () => {
 
     // A second backup with an edit: no picture uploaded again.
     c.calls.length = 0;
-    await client.save({ ...l, decks: [{ ...l.decks[0], title: 'D2' }] }, 'PC');
+    const second = await client.save({ ...l, decks: [{ ...l.decks[0], title: 'D2' }] }, 'PC');
     expect(c.calls).not.toContain('putImages');
     expect(sheets['Quizzo images'].getLastRow()).toBe(rowsAfterFirst);
+    // It replaced the first backup; the pictures the two share are still there.
+    await expect(client.get(first.id)).rejects.toThrow(/not found/);
 
     // Restore on a new device: pictures come back, cards point at them.
-    const restored = parseLibraryBackup(await client.get(first.id)).library!;
+    const restored = parseLibraryBackup(await client.get(second.id)).library!;
     expect(restored.images).toEqual(l.images);
     expect(restored.decks[0].cards[0].image).toBe(l.decks[0].cards[0].image);
 
     // Restore on a device that has the pictures: none downloaded.
     c.calls.length = 0;
-    await client.get(first.id, l.images);
+    await client.get(second.id, l.images);
     expect(c.calls).not.toContain('getImages');
   });
 

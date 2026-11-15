@@ -368,7 +368,9 @@ export function Help({ topic, onBack, onAddExampleDeck, onReplayTour }: Props) {
           </li>
           <li>
             <b>Back up automatically</b> uploads about half a minute after you change something, while Quizzo is open.
-            The Sheet keeps the 20 newest backups.
+            Each backup replaces the previous one from the same device, so the Sheet holds one latest copy per device.
+            To keep a copy on the side, type a name and press <b>Save as separate backup</b>; named backups stay until
+            you delete them.
           </li>
           <li>
             <b>Restore</b> shows when the backup was made (and on which device) next to your last change here. Then

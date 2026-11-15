@@ -73,12 +73,15 @@ export default function App() {
   const [autoError, setAutoError] = useState<string | null>(null);
   const payloadHash = useMemo(() => (lib?.cloud?.url ? fingerprint(backupPayload(lib)) : ''), [lib]);
 
-  const cloudBackup = useCallback(async () => {
+  /** Without a name: replaces this device's latest backup. With one: saves a separate, named backup. */
+  const cloudBackup = useCallback(async (name?: string) => {
     const current = libRef.current;
     const cloud = current?.cloud;
     if (!current || !cloud?.url) throw new Error('Not connected to a Google Sheet');
     const hash = fingerprint(backupPayload(current));
-    const info = await new CloudClient(cloud).save(current, cloud.device?.trim() || defaultDeviceName());
+    const info = await new CloudClient(cloud).save(current, cloud.device?.trim() || defaultDeviceName(), name);
+    // A named backup is a snapshot on the side; the latest backup still has to follow the changes.
+    if (name) return info;
     setAutoError(null);
     setLib((l) => (l?.cloud ? { ...l, cloud: { ...l.cloud, lastBackupAt: info.created, lastHash: hash } } : l));
     return info;
@@ -88,7 +91,7 @@ export default function App() {
   useEffect(() => {
     if (!cloud?.auto || !cloud.url || !payloadHash || payloadHash === cloud.lastHash) return;
     const t = setTimeout(() => {
-      cloudBackup().catch((e) => setAutoError((e as Error).message));
+      cloudBackup().catch((e: unknown) => setAutoError((e as Error).message));
     }, AUTO_BACKUP_DELAY);
     return () => clearTimeout(t);
   }, [payloadHash, cloud?.auto, cloud?.url, cloud?.lastHash, cloudBackup]);
