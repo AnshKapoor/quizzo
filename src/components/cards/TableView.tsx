@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { TableCard } from '../../types';
 import { shuffle } from '../../lib/util';
-import { Explanation, Feedback } from '../common';
+import { CheckButton, Explanation, Feedback } from '../common';
 import { useDragDrop } from '../useDragDrop';
 import type { CardViewProps } from './CardView';
 
@@ -99,9 +99,7 @@ export function TableView({ card, onAnswer }: CardViewProps<TableCard>) {
         </div>
       )}
       {!checked && (
-        <button type="button" className="primary" disabled={filled.includes(null)} onClick={check}>
-          Check
-        </button>
+        <CheckButton disabled={filled.includes(null)} onClick={check} />
       )}
       {checked && <Feedback correct={correct} />}
       {checked && <Explanation text={card.explanation} />}

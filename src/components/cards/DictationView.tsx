@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DictationCard } from '../../types';
 import { compareWords, dictationCorrect, type WordResult } from '../../lib/diff';
 import { canSpeak, speak } from '../../lib/speech';
-import { Explanation, Feedback, SpecialCharBar } from '../common';
+import { CardAction, CheckButton, Explanation, Feedback, SpecialCharBar } from '../common';
 import type { CardViewProps } from './CardView';
 
 /** Listen and type what you hear. */
@@ -80,29 +80,29 @@ export function DictationView({ card, lang, onAnswer, autoPlay }: CardViewProps<
           onChange={(e) => setValue(e.target.value)}
         />
       </form>
-      {!result && (
-        <>
-          <SpecialCharBar lang={lang} onInsert={insert} />
-          <button type="button" className="primary" disabled={!value.trim()} onClick={check}>
-            Check
-          </button>
-        </>
-      )}
+      <SpecialCharBar lang={lang} onInsert={insert} />
+      {!result && <CheckButton disabled={!value.trim()} onClick={check} />}
       {result && (
         <Feedback correct={ok}>
           {result.some((w) => w.status === 'umlaut') && <span> Accepted, but try writing ä, ö, ü and ß.</span>}
         </Feedback>
       )}
       {result && (
-        <div className="dictation-result">
-          {result.map((w, i) => (
-            <span key={i} className={`w-${w.status}`}>
-              {w.word}
-            </span>
-          ))}
-        </div>
+        <CardAction>
+          <div className="dictation-result">
+            {result.map((w, i) => (
+              <span key={i} className={`w-${w.status}`}>
+                {w.word}
+              </span>
+            ))}
+          </div>
+        </CardAction>
       )}
-      {result && card.translation && <div className="sub translation">{card.translation}</div>}
+      {result && card.translation && (
+        <CardAction>
+          <div className="sub translation">{card.translation}</div>
+        </CardAction>
+      )}
       {result && <Explanation text={card.explanation} />}
     </div>
   );

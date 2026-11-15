@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { McqCard } from '../../types';
 import { shuffleIndexes } from '../../lib/util';
-import { Explanation, Feedback, SpeakButton } from '../common';
+import { CheckButton, Explanation, Feedback, SpeakButton } from '../common';
 import type { CardViewProps } from './CardView';
 
 export function McqView({ card, lang, onAnswer }: CardViewProps<McqCard>) {
@@ -51,9 +51,7 @@ export function McqView({ card, lang, onAnswer }: CardViewProps<McqCard>) {
         })}
       </div>
       {multi && !checked && (
-        <button type="button" className="primary" disabled={!selected.length} onClick={() => submit(selected)}>
-          Check
-        </button>
+        <CheckButton disabled={!selected.length} onClick={() => submit(selected)} />
       )}
       {checked && <Feedback correct={isCorrect(selected)} />}
       {checked && <Explanation text={card.explanation} />}

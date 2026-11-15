@@ -25,30 +25,36 @@ export interface CardViewProps<C extends StudyCard = StudyCard> {
   label?: string;
 }
 
-/** Hint text and / or picture behind a button, so looking at it is the learner's choice. */
-function HintToggle({ text, image: ref }: { text?: string; image?: string }) {
-  const [open, setOpen] = useState(false);
-  const image = useImageSrc(ref);
-  if (!text && !image) return null;
-  return open ? (
-    <div className="hint hint-open">
-      {text && <span>💡 {text}</span>}
-      {image && <img className="card-image hint-image" src={image} alt="Hint" />}
-    </div>
-  ) : (
-    <button type="button" className="ghost hint-btn" onClick={() => setOpen(true)}>
-      💡 Show hint
-    </button>
-  );
-}
-
 /** Renders any card type. Give it a `key` per card so its internal state resets. */
 export function CardView(props: CardViewProps) {
   const { card } = props;
   const image = useImageSrc(card.image);
+  const hintImage = useImageSrc(card.hintImage);
+  // Flashcards show their hint on the front themselves.
+  const hasHint = card.type !== 'flashcard' && !!(card.hint || hintImage);
+  const [hintOpen, setHintOpen] = useState(false);
   return (
     <div className={`card card-${card.type}`}>
-      <div className="card-type">{props.label ?? CARD_TYPE_LABELS[card.type]}</div>
+      <div className="card-head">
+        <span className="card-type">{props.label ?? CARD_TYPE_LABELS[card.type]}</span>
+        {/* In the header from the start: a hint is only useful before answering. */}
+        {hasHint && (
+          <button
+            type="button"
+            className={`chip hint-btn ${hintOpen ? 'active' : ''}`}
+            aria-expanded={hintOpen}
+            onClick={() => setHintOpen((o) => !o)}
+          >
+            💡 Hint
+          </button>
+        )}
+      </div>
+      {hasHint && hintOpen && (
+        <div className="hint hint-open">
+          {card.hint && <span>{card.hint}</span>}
+          {hintImage && <img className="card-image hint-image" src={hintImage} alt="Hint" />}
+        </div>
+      )}
       {image && <img className="card-image" src={image} alt="" />}
       {card.type === 'flashcard' && <FlashcardView {...props} card={card} />}
       {card.type === 'mcq' && <McqView {...props} card={card} />}
@@ -60,8 +66,6 @@ export function CardView(props: CardViewProps) {
       {card.type === 'dictation' && <DictationView {...props} card={card} />}
       {card.type === 'sequence' && <SequenceView {...props} card={card} />}
       {card.type === 'table' && <TableView {...props} card={card} />}
-      {/* Flashcards show their hint on the front themselves. */}
-      {card.type !== 'flashcard' && <HintToggle text={card.hint} image={card.hintImage} />}
     </div>
   );
 }

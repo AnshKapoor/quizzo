@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { SequenceCard } from '../../types';
 import { moveItem, shuffleIndexes } from '../../lib/util';
-import { Explanation, Feedback } from '../common';
+import { CardAction, CheckButton, Explanation, Feedback } from '../common';
 import { useDragDrop } from '../useDragDrop';
 import type { CardViewProps } from './CardView';
 
@@ -88,17 +88,17 @@ export function SequenceView({ card, onAnswer }: CardViewProps<SequenceCard>) {
         ))}
       </ol>
       {!checked && (
-        <button type="button" className="primary" onClick={check}>
-          Check
-        </button>
+        <CheckButton onClick={check} />
       )}
       {checked && <Feedback correct={correct} />}
       {checked && !correct && (
-        <ol className="sequence-solution">
-          {card.items.map((t, i) => (
-            <li key={i}>{t}</li>
-          ))}
-        </ol>
+        <CardAction>
+          <ol className="sequence-solution">
+            {card.items.map((t, i) => (
+              <li key={i}>{t}</li>
+            ))}
+          </ol>
+        </CardAction>
       )}
       {checked && <Explanation text={card.explanation} />}
     </div>

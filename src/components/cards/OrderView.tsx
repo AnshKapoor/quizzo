@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { OrderCard } from '../../types';
 import { sameSentence } from '../../lib/answer';
 import { shuffleIndexes } from '../../lib/util';
-import { Explanation, Feedback, SpeakButton } from '../common';
+import { CardAction, CheckButton, Explanation, Feedback, SpeakButton } from '../common';
 import { useDragDrop } from '../useDragDrop';
 import { useFlip } from '../useFlip';
 import type { CardViewProps } from './CardView';
@@ -82,9 +82,7 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
       </div>
       )}
       {!locked && (
-        <button type="button" className="primary" disabled={built.length !== card.tokens.length} onClick={check}>
-          Check
-        </button>
+        <CheckButton disabled={built.length !== card.tokens.length} onClick={check} />
       )}
       {locked && (
         <Feedback correct={!!result}>
@@ -92,9 +90,11 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
         </Feedback>
       )}
       {locked && (
-        <div className="example">
-          {shown} <SpeakButton text={shown} lang={lang} />
-        </div>
+        <CardAction>
+          <div className="example">
+            {shown} <SpeakButton text={shown} lang={lang} />
+          </div>
+        </CardAction>
       )}
       {locked && <Explanation text={card.explanation} />}
     </div>

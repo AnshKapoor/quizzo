@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FlashcardCard, Grade } from '../../types';
-import { Explanation, SpeakButton } from '../common';
+import { CardAction, CheckButton, Explanation, SpeakButton } from '../common';
 import type { CardViewProps } from './CardView';
 import { useImageSrc } from '../ImageContext';
 
@@ -65,8 +65,10 @@ export function FlashcardView({ card, lang, onAnswer }: CardViewProps<FlashcardC
           <div className="tap-hint">Tap or press Space to reveal</div>
         )}
       </div>
+      {!revealed && <CheckButton onClick={() => setRevealed(true)}>Show answer</CheckButton>}
       {revealed && <Explanation text={card.explanation} />}
       {revealed && (
+        <CardAction>
         <div className="grades">
           {GRADES.map((g) => (
             <button
@@ -81,6 +83,7 @@ export function FlashcardView({ card, lang, onAnswer }: CardViewProps<FlashcardC
             </button>
           ))}
         </div>
+        </CardAction>
       )}
     </div>
   );

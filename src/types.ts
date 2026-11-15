@@ -211,7 +211,7 @@ export interface Appearance {
   font: 'sans' | 'serif' | 'wide' | 'mono';
   size: 's' | 'm' | 'l' | 'xl';
   /** Where questions sit while studying: middle of the screen, top with centred text, or top left. */
-  layout: 'center' | 'top-center' | 'left';
+  layout: 'top-center' | 'left';
   cards: 'raised' | 'flat' | 'outlined';
 }
 

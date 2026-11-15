@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { canSpeak, speak } from '../lib/speech';
 
 export function SpeakButton({ text, lang }: { text: string; lang: string }) {
@@ -42,17 +43,54 @@ export function SpecialCharBar({ onInsert, lang }: { onInsert: (ch: string) => v
   );
 }
 
+/**
+ * Where a card's Check button and its result go. While studying this is the bar fixed to the
+ * bottom of the screen, so the card itself never changes size or moves when an answer is checked.
+ * Without it (editor preview, help examples) they stay inside the card.
+ */
+export const ActionSlotContext = createContext<HTMLElement | null>(null);
+
+/** Puts its children in the action bar when there is one, otherwise leaves them in place. */
+export function CardAction({ children }: { children: ReactNode }) {
+  const slot = useContext(ActionSlotContext);
+  return slot ? createPortal(children, slot) : <>{children}</>;
+}
+
+export function CheckButton({
+  disabled,
+  onClick,
+  children = 'Check',
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <CardAction>
+      <button type="button" className="primary check-btn" disabled={disabled} onClick={onClick}>
+        {children}
+      </button>
+    </CardAction>
+  );
+}
+
 export function Feedback({ correct, children }: { correct: boolean; children?: ReactNode }) {
   return (
-    <div className={`feedback ${correct ? 'ok' : 'bad'}`} role="status">
-      <strong>{correct ? '✓ Richtig!' : '✗ Not quite'}</strong>
-      {children}
-    </div>
+    <CardAction>
+      <div className={`feedback ${correct ? 'ok' : 'bad'}`} role="status">
+        <strong>{correct ? '✓ Richtig!' : '✗ Not quite'}</strong>
+        {children}
+      </div>
+    </CardAction>
   );
 }
 
 export function Explanation({ text }: { text?: string }) {
-  return text ? <p className="explanation">💡 {text}</p> : null;
+  return text ? (
+    <CardAction>
+      <p className="explanation">💡 {text}</p>
+    </CardAction>
+  ) : null;
 }
 
 /**

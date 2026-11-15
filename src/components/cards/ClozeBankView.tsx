@@ -3,7 +3,7 @@ import type { ClozeCard } from '../../types';
 import { checkTyped, isAccepted, type AnswerQuality } from '../../lib/answer';
 import { clozeSolution, parseCloze } from '../../lib/cloze';
 import { shuffle } from '../../lib/util';
-import { Explanation, Feedback, SpeakButton } from '../common';
+import { CardAction, CheckButton, Explanation, Feedback, SpeakButton } from '../common';
 import { useDragDrop } from '../useDragDrop';
 import { useFlip } from '../useFlip';
 import type { CardViewProps } from './CardView';
@@ -97,15 +97,15 @@ export function ClozeBankView({ card, lang, onAnswer }: CardViewProps<ClozeCard>
         </div>
       )}
       {!results && (
-        <button type="button" className="primary" disabled={filled.includes(null)} onClick={check}>
-          Check
-        </button>
+        <CheckButton disabled={filled.includes(null)} onClick={check} />
       )}
       {results && <Feedback correct={correct} />}
       {results && (
-        <div className="example">
-          {clozeSolution(card.text)} <SpeakButton text={clozeSolution(card.text)} lang={lang} />
-        </div>
+        <CardAction>
+          <div className="example">
+            {clozeSolution(card.text)} <SpeakButton text={clozeSolution(card.text)} lang={lang} />
+          </div>
+        </CardAction>
       )}
       {results && <Explanation text={card.explanation} />}
     </div>

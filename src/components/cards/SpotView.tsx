@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { SpotCard } from '../../types';
 import { correctedSentence, parseSpot } from '../../lib/spot';
-import { Explanation, Feedback, SpeakButton } from '../common';
+import { CardAction, CheckButton, Explanation, Feedback, SpeakButton } from '../common';
 import type { CardViewProps } from './CardView';
 
 /** Find the mistake: tap the wrong word(s). */
@@ -56,15 +56,15 @@ export function SpotView({ card, lang, onAnswer }: CardViewProps<SpotCard>) {
         })}
       </div>
       {!checked && (
-        <button type="button" className="primary" disabled={!sel.length} onClick={check}>
-          Check
-        </button>
+        <CheckButton disabled={!sel.length} onClick={check} />
       )}
       {checked && <Feedback correct={isCorrect} />}
       {checked && (
-        <div className="example">
-          {fixed} <SpeakButton text={fixed} lang={lang} />
-        </div>
+        <CardAction>
+          <div className="example">
+            {fixed} <SpeakButton text={fixed} lang={lang} />
+          </div>
+        </CardAction>
       )}
       {checked && <Explanation text={card.explanation} />}
     </div>

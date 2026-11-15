@@ -314,8 +314,8 @@ export function Help({ topic, onBack, onAddExampleDeck, onReplayTour }: Props) {
             <b>Theme</b>: Match device, Light, Dark, Sepia, Ocean, Forest, Midnight or High contrast.
           </li>
           <li>
-            <b>Question placement</b>: <i>Centred</i> puts the question in the middle of the screen with centred text;
-            <i> Top, centred</i> keeps it at the top; <i>Top, left</i> is the classic layout.
+            <b>Question placement</b>: the question always starts at the top of the screen; choose
+            <i> Centred text</i> or <i>Left-aligned text</i>.
           </li>
           <li>
             <b>Card style</b>, <b>Font</b> and <b>Text size</b> change how cards look and how big everything is.

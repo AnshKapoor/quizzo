@@ -14,7 +14,7 @@ import {
 } from '../lib/quiz';
 import { VARIANT_LABELS } from '../lib/vocab';
 import { CardView } from '../components/cards/CardView';
-import { Stage } from '../components/Stage';
+import { ActionSlotContext } from '../components/common';
 
 interface Props {
   quiz: QuizPreset;
@@ -59,6 +59,8 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   /** Grade from answer speed for the current question (questions with their own clock only). */
   const [speed, setSpeed] = useState<{ grade: Grade; seconds: number } | null>(null);
   const reported = useRef(false);
+  /** The bottom bar's slot for the card's Check button and result. */
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
 
   const available = pool.length;
   const best = history.reduce<QuizAttempt | null>(
@@ -70,6 +72,8 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   // Each question's own clock: its card's time, the same for all, or none.
   const limit = phase === 'running' && queue[pos] ? questionLimit(quiz, queue[pos], defaultTime) : 0;
   const questionLeft = limit && !result ? (questionAt + limit * 1000 - now) / 1000 : null;
+  /** What the question's clock shows: the time left, frozen once answered. */
+  const clockLeft = questionLeft ?? Math.max(0, limit - (speed?.seconds ?? 0));
 
   const start = () => {
     const q = buildQuizQueue(pool, quiz);
@@ -190,7 +194,7 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
         </div>
       )}
 
-      <Stage resetKey={`${phase}-${run}-${pos}`}>
+      <div className="stage">
         {phase === 'ready' && (
           <div className="empty quiz-intro">
             <h2>{quiz.title}</h2>
@@ -232,37 +236,25 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
 
         {phase === 'running' && item && (
           <>
-            {questionLeft !== null && (
-              <div className={`question-clock ${low(questionLeft, limit) ? 'low' : ''}`}>
-                <div style={{ width: `${Math.max(0, questionLeft / limit) * 100}%` }} />
-                <span>{Math.max(0, Math.ceil(questionLeft))} s</span>
+            {/* Stays (stopped) after answering, so the card below does not jump up. */}
+            {limit > 0 && (
+              <div className={`question-clock ${clockLeft <= Math.min(30, limit / 4) ? 'low' : ''}`}>
+                <div style={{ width: `${Math.max(0, clockLeft / limit) * 100}%` }} />
+                <span>{Math.max(0, Math.ceil(clockLeft))} s</span>
               </div>
             )}
-            <CardView
-              key={`${run}-${pos}`}
-              card={item.card}
-              label={item.variant ? VARIANT_LABELS[item.variant] : undefined}
-              lang={item.lang}
-              onAnswer={answer}
-              autoPlay
-            />
-            <div className="next-row">
-              {!result && (
-                <button type="button" className="ghost" onClick={() => goTo(pos + 1, outcomes)}>
-                  Skip
-                </button>
+            <ActionSlotContext.Provider value={slot}>
+              {slot && (
+                <CardView
+                  key={`${run}-${pos}`}
+                  card={item.card}
+                  label={item.variant ? VARIANT_LABELS[item.variant] : undefined}
+                  lang={item.lang}
+                  onAnswer={answer}
+                  autoPlay
+                />
               )}
-              {speed && (
-                <span className={`speed-grade grade-${speed.grade}`} title="Marked by how quickly you answered">
-                  {GRADE_LABELS[speed.grade]} · {Math.max(1, Math.round(speed.seconds))} s of {limit} s
-                </span>
-              )}
-              {result && (
-                <button type="button" className="primary" autoFocus onClick={() => goTo(pos + 1, outcomes)}>
-                  {pos + 1 >= queue.length ? 'Finish' : 'Next'} <kbd>Enter</kbd>
-                </button>
-              )}
-            </div>
+            </ActionSlotContext.Provider>
           </>
         )}
 
@@ -296,7 +288,30 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
             </ol>
           </div>
         )}
-      </Stage>
+      </div>
+
+      {phase === 'running' && item && (
+        <footer className={`answer-bar ${result ? (result.correct ? 'ok' : 'bad') : ''}`}>
+          <div className="answer-bar-inner">
+            <div ref={setSlot} className="answer-slot" />
+            {speed && (
+              <span className={`speed-grade grade-${speed.grade}`} title="Marked by how quickly you answered">
+                {GRADE_LABELS[speed.grade]} · {Math.max(1, Math.round(speed.seconds))} s of {limit} s
+              </span>
+            )}
+            {!result && (
+              <button type="button" className="ghost skip-btn" onClick={() => goTo(pos + 1, outcomes)}>
+                Skip
+              </button>
+            )}
+            {result && (
+              <button type="button" className="primary next-btn" autoFocus onClick={() => goTo(pos + 1, outcomes)}>
+                {pos + 1 >= queue.length ? 'Finish' : 'Next'} <kbd>Enter</kbd>
+              </button>
+            )}
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

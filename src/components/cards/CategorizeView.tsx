@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { CategorizeCard } from '../../types';
 import { shuffle } from '../../lib/util';
-import { Explanation, Feedback } from '../common';
+import { CheckButton, Explanation, Feedback } from '../common';
 import { useDragDrop } from '../useDragDrop';
 import type { CardViewProps } from './CardView';
 
@@ -76,9 +76,7 @@ export function CategorizeView({ card, onAnswer }: CardViewProps<CategorizeCard>
         ))}
       </div>
       {!checked && (
-        <button type="button" className="primary" disabled={!allPlaced} onClick={check}>
-          Check
-        </button>
+        <CheckButton disabled={!allPlaced} onClick={check} />
       )}
       {checked && <Feedback correct={correct} />}
       {checked && <Explanation text={card.explanation} />}

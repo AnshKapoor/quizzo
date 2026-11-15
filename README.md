@@ -31,7 +31,7 @@ Three ways to study a deck:
   type and tag, select all shown, preview), add an optional question count and timers, and run it like a timed
   quiz. Answers still update each card's progress in its own deck. ⤓ exports one as a normal deck file to share.
 - **Appearance** (🎨 on the start screen): 8 themes (Match device, Light, Dark, Sepia, Ocean, Forest, Midnight,
-  High contrast), question placement (Centred in the middle of the screen, Top centred, Top left), card style
+  High contrast), question text alignment (centred or left; the question always sits at the top), card style
   (Raised, Flat, Outlined), font and text size. Stored in the library, so a backup restores it.
 
 - **Backup & other devices** (☁ Backup on the start screen): back up everything (decks, quizzes, progress,

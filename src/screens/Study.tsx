@@ -4,7 +4,7 @@ import { buildQueue } from '../lib/library';
 import { VARIANT_LABELS } from '../lib/vocab';
 import { DEFAULT_QUESTION_TIME, GRADE_LABELS, speedGrade } from '../lib/quiz';
 import { CardView } from '../components/cards/CardView';
-import { Stage } from '../components/Stage';
+import { ActionSlotContext } from '../components/common';
 
 interface Props {
   deck: Deck;
@@ -31,12 +31,17 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
   const [questionAt, setQuestionAt] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
 
+  /** The bottom bar's slot for the card's Check button and result. */
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+
   const item = queue[pos];
   const finished = pos >= queue.length;
 
   // Quiz mode: every question has its own clock (the card's time, or the default from Settings).
   const limit = mode === 'quiz' && item && !finished ? (item.card.time && item.card.time > 0 ? item.card.time : defaultTime) : 0;
   const questionLeft = limit && !result ? (questionAt + limit * 1000 - now) / 1000 : null;
+  /** What the question's clock shows: the time left, frozen once answered. */
+  const clockLeft = questionLeft ?? Math.max(0, limit - (speed?.seconds ?? 0));
 
   const answer = (r: AnswerResult) => {
     setResult(r);
@@ -114,7 +119,7 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
         <div style={{ width: `${queue.length ? (pos / queue.length) * 100 : 100}%` }} />
       </div>
 
-      <Stage resetKey={`${round}-${pos}`}>
+      <div className="stage">
         {queue.length === 0 ? (
           <div className="empty">
             <h2>Nothing due 🎉</h2>
@@ -142,35 +147,46 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
           </div>
         ) : (
           <>
-            {questionLeft !== null && (
-              <div className={`question-clock ${questionLeft <= Math.min(30, limit / 4) ? 'low' : ''}`}>
-                <div style={{ width: `${Math.max(0, questionLeft / limit) * 100}%` }} />
-                <span>{Math.max(0, Math.ceil(questionLeft))} s</span>
+            {/* Stays (stopped) after answering, so the card below does not jump up. */}
+            {limit > 0 && (
+              <div className={`question-clock ${clockLeft <= Math.min(30, limit / 4) ? 'low' : ''}`}>
+                <div style={{ width: `${Math.max(0, clockLeft / limit) * 100}%` }} />
+                <span>{Math.max(0, Math.ceil(clockLeft))} s</span>
               </div>
             )}
-            <CardView
-              key={`${round}-${pos}-${item.key}`}
-              card={item.card}
-              label={item.variant ? VARIANT_LABELS[item.variant] : undefined}
-              lang={deck.language.target}
-              onAnswer={answer}
-              autoPlay
-            />
-            {result && (
-              <div className="next-row">
-                {speed && (
-                  <span className={`speed-grade grade-${speed.grade}`} title="Marked by how quickly you answered">
-                    {GRADE_LABELS[speed.grade]} · {Math.max(1, Math.round(speed.seconds))} s of {limit} s
-                  </span>
-                )}
-                <button type="button" className="primary" autoFocus onClick={next}>
-                  Next <kbd>Enter</kbd>
-                </button>
-              </div>
-            )}
+            <ActionSlotContext.Provider value={slot}>
+              {slot && (
+                <CardView
+                  key={`${round}-${pos}-${item.key}`}
+                  card={item.card}
+                  label={item.variant ? VARIANT_LABELS[item.variant] : undefined}
+                  lang={deck.language.target}
+                  onAnswer={answer}
+                  autoPlay
+                />
+              )}
+            </ActionSlotContext.Provider>
           </>
         )}
-      </Stage>
+      </div>
+
+      {item && !finished && (
+        <footer className={`answer-bar ${result ? (result.correct ? 'ok' : 'bad') : ''}`}>
+          <div className="answer-bar-inner">
+            <div ref={setSlot} className="answer-slot" />
+            {speed && (
+              <span className={`speed-grade grade-${speed.grade}`} title="Marked by how quickly you answered">
+                {GRADE_LABELS[speed.grade]} · {Math.max(1, Math.round(speed.seconds))} s of {limit} s
+              </span>
+            )}
+            {result && (
+              <button type="button" className="primary next-btn" autoFocus onClick={next}>
+                Next <kbd>Enter</kbd>
+              </button>
+            )}
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

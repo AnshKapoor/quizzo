@@ -2,7 +2,7 @@ import { Fragment, useMemo, useRef, useState } from 'react';
 import type { ClozeCard } from '../../types';
 import { checkTyped, isAccepted, type AnswerQuality } from '../../lib/answer';
 import { clozeSolution, parseCloze } from '../../lib/cloze';
-import { Explanation, Feedback, SpeakButton, SpecialCharBar } from '../common';
+import { CardAction, CheckButton, Explanation, Feedback, SpeakButton, SpecialCharBar } from '../common';
 import type { CardViewProps } from './CardView';
 
 export function ClozeView({ card, lang, onAnswer }: CardViewProps<ClozeCard>) {
@@ -78,14 +78,8 @@ export function ClozeView({ card, lang, onAnswer }: CardViewProps<ClozeCard>) {
         {/* lets Enter submit */}
         <button type="submit" hidden />
       </form>
-      {!results && (
-        <>
-          <SpecialCharBar lang={lang} onInsert={insert} />
-          <button type="button" className="primary" onClick={check}>
-            Check
-          </button>
-        </>
-      )}
+      <SpecialCharBar lang={lang} onInsert={insert} />
+      {!results && <CheckButton onClick={check} />}
       {results && (
         <Feedback correct={correct}>
           {results.includes('umlaut') && <span> Accepted — but try writing ä, ö, ü, ß.</span>}
@@ -93,9 +87,11 @@ export function ClozeView({ card, lang, onAnswer }: CardViewProps<ClozeCard>) {
         </Feedback>
       )}
       {results && (
-        <div className="example">
-          {clozeSolution(card.text)} <SpeakButton text={clozeSolution(card.text)} lang={lang} />
-        </div>
+        <CardAction>
+          <div className="example">
+            {clozeSolution(card.text)} <SpeakButton text={clozeSolution(card.text)} lang={lang} />
+          </div>
+        </CardAction>
       )}
       {results && <Explanation text={card.explanation} />}
     </div>
