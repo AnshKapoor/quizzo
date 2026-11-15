@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { canPlayMusic, musicEnabled, setMusicEnabled, startMusic, stopMusic } from '../lib/music';
+import { canPlayMusic, musicEnabled, setMusicEnabled, setMusicUrgent, startMusic, stopMusic } from '../lib/music';
 
-/** Plays the background music while `playing` is true and the player has it switched on. */
-export function useQuizMusic(playing: boolean) {
+/**
+ * Plays the background music while `playing` is true and the player has it switched on.
+ * `urgent` (the clock is nearly out) switches to the tenser loop.
+ */
+export function useQuizMusic(playing: boolean, urgent = false) {
   const [on, setOn] = useState(musicEnabled);
   useEffect(() => {
     if (!playing || !on) return;
     startMusic();
     return stopMusic;
   }, [playing, on]);
+  useEffect(() => setMusicUrgent(playing && urgent), [playing, urgent]);
   const toggle = () => {
     setMusicEnabled(!on);
     setOn(!on);

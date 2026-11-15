@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Deck, Library, QuizPreset, VocabCard } from '../types';
 import { cardToForm, emptyForm, formToCard } from './cardForm';
-import { DEFAULT_QUESTION_TIME, defaultQuestionTime, newQuizPreset, questionLimit, quizSummary, speedGrade } from './quiz';
+import { DEFAULT_QUESTION_TIME, defaultQuestionTime, newQuizPreset, questionLimit, quizSummary, runningOut, speedGrade } from './quiz';
 import { emptyLibrary } from './storage';
 import { parseImport, validateCard } from './validate';
 import { expandCard } from './vocab';
@@ -104,5 +104,20 @@ describe('card pictures', () => {
     const v: VocabCard = { id: 'v', type: 'vocab', word: 'Tisch', meaning: 'table', image: pic, hintImage: pic };
     const deck: Deck = { id: 'd', title: 'D', language: { target: 'de', native: 'en' }, cards: [v] };
     expect(expandCard(v, deck).every((it) => it.card.image === pic && it.card.hintImage === pic)).toBe(true);
+  });
+});
+
+describe('runningOut', () => {
+  it('is true once a running clock is at or below the threshold', () => {
+    expect(runningOut(10.5, 30, 10)).toBe(false);
+    expect(runningOut(10, 30, 10)).toBe(true);
+    expect(runningOut(20, 300, 20)).toBe(true);
+  });
+  it('waits for the second half of a short clock', () => {
+    expect(runningOut(8, 12, 10)).toBe(false);
+    expect(runningOut(6, 12, 10)).toBe(true);
+  });
+  it('is false when the clock is stopped or absent', () => {
+    expect(runningOut(null, 30, 10)).toBe(false);
   });
 });

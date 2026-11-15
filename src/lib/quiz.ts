@@ -145,6 +145,17 @@ export function quizAttempts(lib: Library, deckId: string, quizId: string): Quiz
 
 export const percent = (correct: number, total: number) => (total ? Math.round((correct / total) * 100) : 0);
 
+/** Seconds left at which the music turns urgent: on a question's own clock, and on the whole quiz's clock. */
+export const URGENT_QUESTION_SECONDS = 10;
+export const URGENT_QUIZ_SECONDS = 20;
+
+/**
+ * True when a running clock is nearly out. `left` is null when the clock isn't running.
+ * Short clocks turn urgent only in their second half, so they don't start out that way.
+ */
+export const runningOut = (left: number | null, limit: number, threshold: number): boolean =>
+  left !== null && left <= Math.min(threshold, limit / 2);
+
 /** 75 → "1:15", 3600 → "60:00". */
 export function formatTime(seconds: number): string {
   const s = Math.max(0, Math.ceil(seconds));

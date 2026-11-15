@@ -8,6 +8,9 @@ import {
   GRADE_LABELS,
   percent,
   questionLimit,
+  runningOut,
+  URGENT_QUESTION_SECONDS,
+  URGENT_QUIZ_SECONDS,
   quizSummary,
   speedGrade,
   type QuizItem,
@@ -62,8 +65,6 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   const reported = useRef(false);
   /** The bottom bar's slot for the card's Check button and result. */
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  // Background music plays while questions are on screen.
-  const music = useQuizMusic(phase === 'running');
 
   const available = pool.length;
   const best = history.reduce<QuizAttempt | null>(
@@ -77,6 +78,11 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   const questionLeft = limit && !result ? (questionAt + limit * 1000 - now) / 1000 : null;
   /** What the question's clock shows: the time left, frozen once answered. */
   const clockLeft = questionLeft ?? Math.max(0, limit - (speed?.seconds ?? 0));
+  // Background music plays while questions are on screen, and turns urgent when a clock is nearly out.
+  const music = useQuizMusic(
+    phase === 'running',
+    runningOut(questionLeft, limit, URGENT_QUESTION_SECONDS) || runningOut(totalLeft, quiz.timeLimit, URGENT_QUIZ_SECONDS),
+  );
 
   const start = () => {
     const q = buildQuizQueue(pool, quiz);

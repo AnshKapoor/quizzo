@@ -1,5 +1,6 @@
 // Background music for timed quizzes: a short loop synthesised with the Web Audio API,
 // so there is no audio file to ship and it works offline on every platform.
+// When the clock is nearly out it switches to a faster, tenser loop.
 
 const KEY = 'quizzo.music';
 const VOLUME = 0.16;
@@ -32,6 +33,13 @@ const MELODY = [
   79, 0, 0, 74, 0, 71, 0, 0,
 ];
 
+/** The "time is running out" loop: quicker, with a ticking clock and a two-bar alarm figure. */
+const URGENT_STEP = 60 / 152 / 2;
+// prettier-ignore
+const URGENT_BASS = [45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 46, 46, 46, 46];
+// prettier-ignore
+const URGENT_LEAD = [76, 0, 77, 0, 76, 0, 77, 0, 76, 0, 77, 0, 79, 0, 80, 0];
+
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 
 export const canPlayMusic = () => typeof window !== 'undefined' && 'AudioContext' in window;
@@ -61,6 +69,7 @@ let timer: ReturnType<typeof setInterval> | null = null;
 let idle: ReturnType<typeof setTimeout> | null = null;
 let step = 0;
 let nextAt = 0;
+let urgent = false;
 
 function setup(): AudioContext {
   if (ctx) return ctx;
@@ -126,18 +135,34 @@ function playStep(i: number, at: number): void {
   if (s % 2 === 1) hiss(at, 0.04, 0.1, 7000); // hat
 }
 
+function playUrgentStep(i: number, at: number): void {
+  tone('triangle', hz(URGENT_BASS[i]), at, URGENT_STEP * 0.9, 0.5);
+  tone('sine', i % 2 ? 1250 : 1650, at, 0.035, 0.22); // tick, tock
+  if (URGENT_LEAD[i]) tone('square', hz(URGENT_LEAD[i]), at, URGENT_STEP * 1.5, 0.1);
+  if (i % 2 === 0) tone('sine', 140, at, 0.12, 0.55, 45); // kick on every beat
+  hiss(at, 0.03, 0.09, 7000);
+}
+
 function schedule(): void {
   if (!ctx || ctx.state !== 'running') return;
   const now = ctx.currentTime;
   if (nextAt < now) nextAt = now + 0.05; // fell behind (timers were throttled): carry on from now
   while (nextAt < now + 0.3) {
-    playStep(step, nextAt);
-    step = (step + 1) % MELODY.length;
-    nextAt += STEP;
+    if (urgent) playUrgentStep(step, nextAt);
+    else playStep(step, nextAt);
+    step = (step + 1) % (urgent ? URGENT_LEAD.length : MELODY.length);
+    nextAt += urgent ? URGENT_STEP : STEP;
   }
   // Step back while a card is read aloud (dictation, read-aloud buttons).
   const speaking = 'speechSynthesis' in window && speechSynthesis.speaking;
   duck.gain.setTargetAtTime(speaking ? 0.2 : 1, now, 0.08);
+}
+
+/** Switches between the normal loop and the "time is running out" one. */
+export function setMusicUrgent(on: boolean): void {
+  if (urgent === on) return;
+  urgent = on;
+  step = 0; // each loop starts from its first bar
 }
 
 /** Starts the loop from the top. Call after a tap or key press, or the browser keeps it silent. */
