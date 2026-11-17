@@ -55,6 +55,20 @@ describe('timed quizzes', () => {
       { id: expect.any(String), title: 'ok', questions: 0, timeLimit: 0, perQuestion: 0, types: ['mcq'] },
     ]);
   });
+  it('a new run asks questions that were not just answered', () => {
+    const four = preset({ questions: 4 });
+    const pool = quizPool(deck, four);
+    const now = 1_000_000;
+    const first = buildQuizQueue(pool, four, () => undefined, now).map((i) => i.key);
+    // Marked Easy: saved for repetition in a few days.
+    const answered = new Map(first.map((k, i) => [k, { reps: 1, lapses: 0, ease: 2.5, interval: 3, due: now + 3 * 86_400_000, last: now + i }]));
+    const second = buildQuizQueue(pool, four, (it) => answered.get(it.key), now + 10).map((i) => i.key);
+    expect(second).toHaveLength(4);
+    expect(second.filter((k) => first.includes(k))).toEqual([]);
+    // Once their repetition is due they can be asked again.
+    const all = buildQuizQueue(pool, preset({ questions: 0 }), (it) => answered.get(it.key), now + 10);
+    expect(all).toHaveLength(pool.length);
+  });
   it('draw only matching questions, up to the requested count', () => {
     const verbs = preset({ tags: ['verbs'], questions: 0 });
     const pool = quizPool(deck, verbs);

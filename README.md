@@ -41,7 +41,7 @@ Android, allow installing from your browser or file manager when asked.
 
 - **Twelve question types** (table below), all usable by tapping or dragging.
 - **Study** with spaced repetition: cards that are due plus up to 10 new ones; missed cards come back once at the end.
-- **Quiz** against the clock: every question has its own timer, and faster right answers get a better mark.
+- **Quiz** against the clock: every question has its own timer. After each one you confirm its mark (Easy when right, Again when wrong or out of time) or change it, and a new quiz asks questions you haven't just answered.
 - **Timed quizzes** saved with a deck: number of questions, a time limit for the whole quiz and/or per question,
   optional card-type and tag filters, a per-question review at the end, and your last results.
 - **Custom quizzes** that mix questions from any of your decks.

@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import type { AnswerResult, Deck, Grade, Library, StudyItem } from '../types';
 import { buildQueue } from '../lib/library';
 import { VARIANT_LABELS } from '../lib/vocab';
-import { DEFAULT_QUESTION_TIME, GRADE_LABELS, runningOut, speedGrade, URGENT_QUESTION_SECONDS } from '../lib/quiz';
+import { DEFAULT_QUESTION_TIME, runningOut, URGENT_QUESTION_SECONDS } from '../lib/quiz';
 import { CardView } from '../components/cards/CardView';
 import { ActionSlotContext } from '../components/common';
 import { MusicButton, useQuizMusic } from '../components/MusicButton';
+import { defaultGrade, GradePicker } from '../components/GradePicker';
 
 interface Props {
   deck: Deck;
@@ -27,8 +28,12 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
   const [requeued, setRequeued] = useState<Set<string>>(new Set());
   const [round, setRound] = useState(0);
   const [timedOut, setTimedOut] = useState(0);
-  /** Quiz mode: the grade from answer speed, shown after answering. */
-  const [speed, setSpeed] = useState<{ grade: Grade; seconds: number } | null>(null);
+  /** Quiz mode: the current question's clock ran out before it was answered. */
+  const [missed, setMissed] = useState(false);
+  /** Seconds the current question took, once it is answered or out of time (freezes its clock). */
+  const [used, setUsed] = useState(0);
+  /** Quiz mode: the mark the current question will get; the learner can change it until they move on. */
+  const [pending, setPending] = useState<Grade | null>(null);
   const [questionAt, setQuestionAt] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
 
@@ -40,20 +45,22 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
 
   // Quiz mode: every question has its own clock (the card's time, or the default from Settings).
   const limit = mode === 'quiz' && item && !finished ? (item.card.time && item.card.time > 0 ? item.card.time : defaultTime) : 0;
-  const questionLeft = limit && !result ? (questionAt + limit * 1000 - now) / 1000 : null;
+  /** Answered or out of time: the question waits for Next. */
+  const settled = !!result || missed;
+  const questionLeft = limit && !settled ? (questionAt + limit * 1000 - now) / 1000 : null;
   /** What the question's clock shows: the time left, frozen once answered. */
-  const clockLeft = questionLeft ?? Math.max(0, limit - (speed?.seconds ?? 0));
+  const clockLeft = questionLeft ?? Math.max(0, limit - used);
   // Background music plays in quiz mode while questions are on screen, and turns urgent when the clock is nearly out.
   const music = useQuizMusic(mode === 'quiz' && !finished, runningOut(questionLeft, limit, URGENT_QUESTION_SECONDS));
 
   const answer = (r: AnswerResult) => {
+    if (settled) return;
     setResult(r);
-    if (limit) {
-      const seconds = (Date.now() - questionAt) / 1000;
-      const grade = speedGrade(r, item.card, seconds, limit);
-      setSpeed({ grade, seconds });
-      onRecord(item.key, grade);
-    } else onRecord(item.key, r.grade);
+    setUsed((Date.now() - questionAt) / 1000);
+    // A quiz saves the mark when the learner moves on, so they can change it first.
+    // Flashcards are marked by the learner on the card itself.
+    if (mode === 'quiz') setPending(item.card.type === 'flashcard' ? r.grade : defaultGrade(r.correct));
+    else onRecord(item.key, r.grade);
     setScore((s) => ({ correct: s.correct + (r.correct ? 1 : 0), answered: s.answered + 1 }));
     // In review mode, missed questions come back once at the end of the session.
     if (mode === 'review' && !r.correct && !requeued.has(item.key)) {
@@ -62,9 +69,21 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
     }
   };
 
+  /** Saves the current question's mark for repetition. Call once, when leaving the question. */
+  const commit = () => {
+    if (pending) onRecord(item.key, pending);
+    setPending(null);
+  };
+
+  const exit = () => {
+    commit();
+    onExit();
+  };
+
   const next = () => {
+    commit();
     setResult(null);
-    setSpeed(null);
+    setMissed(false);
     setPos((p) => p + 1);
     setQuestionAt(Date.now());
     setNow(Date.now());
@@ -74,24 +93,24 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
     if (!limit || result) return;
     const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
-  }, [limit, result, pos, round]);
+  }, [limit, settled, pos, round]);
 
-  // Out of time: the question counts as missed and the next one starts.
+  // Out of time: the question counts as missed and stays on screen, marked Again unless the learner changes it.
   useEffect(() => {
     if (questionLeft === null || questionLeft > 0) return;
     setScore((s) => ({ ...s, answered: s.answered + 1 }));
     setTimedOut((n) => n + 1);
-    // Out of time counts like a wrong answer, so the card comes back soon.
-    onRecord(item.key, 'again');
-    next();
+    setMissed(true);
+    setUsed(limit);
+    setPending(defaultGrade(false));
   });
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && result) {
+      if (e.key === 'Enter' && settled && !finished) {
         e.preventDefault();
         next();
-      } else if (e.key === 'Escape') onExit();
+      } else if (e.key === 'Escape') exit();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -101,6 +120,8 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
     setQueue(buildQueue(deck, library, mode));
     setPos(0);
     setResult(null);
+    setMissed(false);
+    setPending(null);
     setScore({ correct: 0, answered: 0 });
     setRequeued(new Set());
     setTimedOut(0);
@@ -112,7 +133,7 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
   return (
     <div className="screen study">
       <header className="bar">
-        <button type="button" className="ghost back" onClick={onExit}>
+        <button type="button" className="ghost back" onClick={exit}>
           ← {deck.title}
         </button>
         <span className="mode-pill">{mode === 'review' ? 'Review' : '⏱ Quiz'}</span>
@@ -167,6 +188,7 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
                   lang={deck.language.target}
                   onAnswer={answer}
                   autoPlay
+                  locked={missed}
                 />
               )}
             </ActionSlotContext.Provider>
@@ -175,15 +197,18 @@ export function Study({ deck, library, mode, defaultTime = DEFAULT_QUESTION_TIME
       </div>
 
       {item && !finished && (
-        <footer className={`answer-bar ${result ? (result.correct ? 'ok' : 'bad') : ''}`}>
+        <footer className={`answer-bar ${result?.correct ? 'ok' : settled ? 'bad' : ''}`}>
           <div className="answer-bar-inner">
-            <div ref={setSlot} className="answer-slot" />
-            {speed && (
-              <span className={`speed-grade grade-${speed.grade}`} title="Marked by how quickly you answered">
-                {GRADE_LABELS[speed.grade]} · {Math.max(1, Math.round(speed.seconds))} s of {limit} s
-              </span>
+            {/* Hidden once time is up, so the card's Check button goes away. */}
+            <div ref={setSlot} className="answer-slot" hidden={missed} />
+            {missed && (
+              <div className="feedback bad" role="status">
+                <strong>⏱ Out of time</strong>
+              </div>
             )}
-            {result && (
+            {/* An answered flashcard already shows the mark the learner gave it. */}
+            {pending && !(result && item.card.type === 'flashcard') && <GradePicker value={pending} onChange={setPending} />}
+            {settled && (
               <button type="button" className="primary next-btn" autoFocus onClick={next}>
                 Next <kbd>Enter</kbd>
               </button>

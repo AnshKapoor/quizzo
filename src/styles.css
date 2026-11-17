@@ -456,7 +456,8 @@ kbd {
 .grade-good, .grade-easy { color: var(--ok); }
 .grade.chosen { outline: 2px solid currentColor; }
 .grade-hard { color: var(--warn); }
-.speed-grade { margin-right: auto; align-self: center; font-weight: 600; font-size: 0.9rem; }
+.grade-picker .grade:not(.chosen) { opacity: 0.55; }
+.grade-picker .grade.chosen { font-weight: 700; }
 
 /* mcq */
 .options { display: grid; gap: 0.5rem; }
@@ -1043,6 +1044,7 @@ kbd {
 .answer-bar.bad { background: var(--bad-bg); border-color: var(--bad); }
 .answer-bar-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; max-width: 680px; margin: 0 auto; }
 .answer-slot { display: contents; }
+.answer-slot[hidden] { display: none; }
 .answer-bar :is(.feedback, .explanation, .example, .translation, .dictation-result, .sequence-solution, .grades) { flex: 0 0 100%; }
 .answer-bar .feedback { padding: 0; background: transparent; font-size: 1.1rem; }
 .answer-bar .explanation { padding: 0; background: transparent; }
@@ -1051,5 +1053,4 @@ kbd {
 }
 .answer-bar :is(.check-btn, .next-btn) { flex: 1; min-height: 48px; }
 .answer-bar .skip-btn { order: -1; min-height: 48px; }
-.answer-bar .speed-grade { flex: 0 0 100%; margin: 0; }
 .answer-bar .grades .grade { min-height: 48px; background: var(--surface); }

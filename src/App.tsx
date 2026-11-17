@@ -180,6 +180,7 @@ export default function App() {
         quiz={quiz}
         pool={customQuizItems(lib, quiz)}
         history={quizAttempts(lib, CUSTOM_QUIZ_OWNER, quiz.id)}
+        progress={lib.progress}
         backLabel="Home"
         ownerId={CUSTOM_QUIZ_OWNER}
         defaultTime={defaultQuestionTime(lib)}
@@ -279,6 +280,7 @@ export default function App() {
         quiz={quiz}
         pool={deckQuizItems(deck, quiz)}
         history={quizAttempts(lib, deck.id, quiz.id)}
+        progress={lib.progress}
         backLabel={deck.title}
         ownerId={deck.id}
         defaultTime={defaultQuestionTime(lib)}

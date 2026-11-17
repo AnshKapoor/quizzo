@@ -1,24 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AnswerResult, Grade, QuizAttempt, QuizPreset } from '../types';
+import type { AnswerResult, Grade, Library, QuizAttempt, QuizPreset } from '../types';
+import { progressKey } from '../lib/library';
 import { CARD_KIND_LABELS, cardKind, cardSummary } from '../lib/cardForm';
 import {
   buildQuizQueue,
   CUSTOM_QUIZ_OWNER,
   formatTime,
-  GRADE_LABELS,
   percent,
   questionLimit,
   runningOut,
   URGENT_QUESTION_SECONDS,
   URGENT_QUIZ_SECONDS,
   quizSummary,
-  speedGrade,
   type QuizItem,
 } from '../lib/quiz';
 import { VARIANT_LABELS } from '../lib/vocab';
 import { MusicButton, useQuizMusic } from '../components/MusicButton';
 import { CardView } from '../components/cards/CardView';
 import { ActionSlotContext } from '../components/common';
+import { defaultGrade, GradePicker } from '../components/GradePicker';
 
 interface Props {
   quiz: QuizPreset;
@@ -26,6 +26,8 @@ interface Props {
   pool: QuizItem[];
   /** Earlier results of this quiz. */
   history: QuizAttempt[];
+  /** Learning progress, so a new run prefers questions that weren't answered recently. */
+  progress: Library['progress'];
   /** Label of the back button, e.g. the deck title. */
   backLabel: string;
   /** `deckId` stored with the result (the deck, or CUSTOM_QUIZ_OWNER). */
@@ -48,7 +50,7 @@ const OUTCOME_TEXT: Record<Outcome, string> = {
   unanswered: 'Not answered',
 };
 
-export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime, onRecord, onFinish, onExit }: Props) {
+export function TimedQuiz({ quiz, pool, history, progress, backLabel, ownerId, defaultTime, onRecord, onFinish, onExit }: Props) {
   const [phase, setPhase] = useState<'ready' | 'running' | 'done'>('ready');
   const [queue, setQueue] = useState<QuizItem[]>([]);
   const [pos, setPos] = useState(0);
@@ -60,8 +62,12 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   const [timeUp, setTimeUp] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [run, setRun] = useState(0);
-  /** Grade from answer speed for the current question (questions with their own clock only). */
-  const [speed, setSpeed] = useState<{ grade: Grade; seconds: number } | null>(null);
+  /** The current question's own clock ran out before it was answered. */
+  const [missed, setMissed] = useState(false);
+  /** Seconds the current question took, once it is answered or out of time (freezes its clock). */
+  const [used, setUsed] = useState(0);
+  /** The mark the current question will get; the learner can change it until they move on. */
+  const [pending, setPending] = useState<Grade | null>(null);
   const reported = useRef(false);
   /** The bottom bar's slot for the card's Check button and result. */
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -75,9 +81,11 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   const totalLeft = quiz.timeLimit ? (startedAt + quiz.timeLimit * 1000 - now) / 1000 : null;
   // Each question's own clock: its card's time, the same for all, or none.
   const limit = phase === 'running' && queue[pos] ? questionLimit(quiz, queue[pos], defaultTime) : 0;
-  const questionLeft = limit && !result ? (questionAt + limit * 1000 - now) / 1000 : null;
+  /** Answered or out of time: the question waits for its mark and Next. */
+  const settled = !!result || missed;
+  const questionLeft = limit && !settled ? (questionAt + limit * 1000 - now) / 1000 : null;
   /** What the question's clock shows: the time left, frozen once answered. */
-  const clockLeft = questionLeft ?? Math.max(0, limit - (speed?.seconds ?? 0));
+  const clockLeft = questionLeft ?? Math.max(0, limit - used);
   // Background music plays while questions are on screen, and turns urgent when a clock is nearly out.
   const music = useQuizMusic(
     phase === 'running',
@@ -85,12 +93,14 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
   );
 
   const start = () => {
-    const q = buildQuizQueue(pool, quiz);
+    const q = buildQuizQueue(pool, quiz, (it) => progress[progressKey(it.deckId, it.key)]);
     const t = Date.now();
     setQueue(q);
     setOutcomes(q.map(() => 'unanswered'));
     setPos(0);
     setResult(null);
+    setMissed(false);
+    setPending(null);
     setStartedAt(t);
     setQuestionAt(t);
     setNow(t);
@@ -118,28 +128,31 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
     });
   };
 
+  /** Saves the current question's mark for repetition. Call once, when leaving the question. */
+  const commit = () => {
+    if (pending) onRecord(queue[pos].deckId, queue[pos].key, pending);
+    setPending(null);
+  };
+
   const goTo = (next: number, final: Outcome[]) => {
+    commit();
     if (next >= queue.length) return finish(false, final);
     setResult(null);
-    setSpeed(null);
+    setMissed(false);
     setPos(next);
     setQuestionAt(Date.now());
   };
 
   const answer = (r: AnswerResult) => {
-    if (phase !== 'running' || result) return;
+    if (phase !== 'running' || settled) return;
     setResult(r);
-    let grade = r.grade;
-    if (limit) {
-      const seconds = (Date.now() - questionAt) / 1000;
-      grade = speedGrade(r, queue[pos].card, seconds, limit);
-      setSpeed({ grade, seconds });
-    }
-    onRecord(queue[pos].deckId, queue[pos].key, grade);
+    setUsed((Date.now() - questionAt) / 1000);
+    // Flashcards are marked by the learner on the card itself.
+    setPending(queue[pos].card.type === 'flashcard' ? r.grade : defaultGrade(r.correct));
     setOutcomes((o) => o.map((x, i) => (i === pos ? (r.correct ? 'right' : 'wrong') : x)));
   };
 
-  // Clock: tick while running, then end the quiz or skip the question when time runs out.
+  // Clock: tick while running, then end the quiz or close the question when time runs out.
   useEffect(() => {
     if (phase !== 'running') return;
     const id = setInterval(() => setNow(Date.now()), 250);
@@ -148,23 +161,28 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
 
   useEffect(() => {
     if (phase !== 'running') return;
-    if (totalLeft !== null && totalLeft <= 0) finish(true);
-    else if (questionLeft !== null && questionLeft <= 0) {
-      const final = outcomes.map((x, i) => (i === pos ? 'timeout' : x));
-      setOutcomes(final);
-      // Out of time counts like a wrong answer for learning progress.
-      onRecord(queue[pos].deckId, queue[pos].key, 'again');
-      goTo(pos + 1, final);
+    if (totalLeft !== null && totalLeft <= 0) {
+      commit();
+      finish(true);
+    } else if (questionLeft !== null && questionLeft <= 0) {
+      // Out of time: the question stays on screen, marked Again unless the learner changes it.
+      setOutcomes((o) => o.map((x, i) => (i === pos ? 'timeout' : x)));
+      setMissed(true);
+      setUsed(limit);
+      setPending(defaultGrade(false));
     }
   });
 
   const leave = () => {
-    if (phase !== 'running' || confirm('Leave the quiz? This attempt will not be saved.')) onExit();
+    if (phase !== 'running') return onExit();
+    if (!confirm('Leave the quiz? This attempt will not be saved.')) return;
+    commit();
+    onExit();
   };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && phase === 'running' && result) {
+      if (e.key === 'Enter' && phase === 'running' && settled) {
         e.preventDefault();
         goTo(pos + 1, outcomes);
       } else if (e.key === 'Escape') leave();
@@ -262,6 +280,7 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
                   lang={item.lang}
                   onAnswer={answer}
                   autoPlay
+                  locked={missed}
                 />
               )}
             </ActionSlotContext.Provider>
@@ -301,20 +320,23 @@ export function TimedQuiz({ quiz, pool, history, backLabel, ownerId, defaultTime
       </div>
 
       {phase === 'running' && item && (
-        <footer className={`answer-bar ${result ? (result.correct ? 'ok' : 'bad') : ''}`}>
+        <footer className={`answer-bar ${result?.correct ? 'ok' : settled ? 'bad' : ''}`}>
           <div className="answer-bar-inner">
-            <div ref={setSlot} className="answer-slot" />
-            {speed && (
-              <span className={`speed-grade grade-${speed.grade}`} title="Marked by how quickly you answered">
-                {GRADE_LABELS[speed.grade]} · {Math.max(1, Math.round(speed.seconds))} s of {limit} s
-              </span>
+            {/* Hidden once time is up, so the card's Check button goes away. */}
+            <div ref={setSlot} className="answer-slot" hidden={missed} />
+            {missed && (
+              <div className="feedback bad" role="status">
+                <strong>⏱ Out of time</strong>
+              </div>
             )}
-            {!result && (
+            {/* An answered flashcard already shows the mark the learner gave it. */}
+            {pending && !(result && item.card.type === 'flashcard') && <GradePicker value={pending} onChange={setPending} />}
+            {!settled && (
               <button type="button" className="ghost skip-btn" onClick={() => goTo(pos + 1, outcomes)}>
                 Skip
               </button>
             )}
-            {result && (
+            {settled && (
               <button type="button" className="primary next-btn" autoFocus onClick={() => goTo(pos + 1, outcomes)}>
                 {pos + 1 >= queue.length ? 'Finish' : 'Next'} <kbd>Enter</kbd>
               </button>

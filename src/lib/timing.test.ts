@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Deck, Library, QuizPreset, VocabCard } from '../types';
 import { cardToForm, emptyForm, formToCard } from './cardForm';
-import { DEFAULT_QUESTION_TIME, defaultQuestionTime, newQuizPreset, questionLimit, quizSummary, runningOut, speedGrade } from './quiz';
+import { DEFAULT_QUESTION_TIME, defaultQuestionTime, newQuizPreset, questionLimit, quizSummary, runningOut } from './quiz';
 import { emptyLibrary } from './storage';
 import { parseImport, validateCard } from './validate';
 import { expandCard } from './vocab';
@@ -56,27 +56,6 @@ describe('per-card quiz times', () => {
     const v: VocabCard = { id: 'v', type: 'vocab', word: 'Tisch', article: 'der', meaning: 'table', time: 15 };
     const deck: Deck = { id: 'd', title: 'D', language: { target: 'de', native: 'en' }, cards: [v] };
     expect(expandCard(v, deck).every((it) => it.card.time === 15)).toBe(true);
-  });
-});
-
-describe('grading by answer speed', () => {
-  const mcq = { id: 'm', type: 'mcq' as const, prompt: 'p', options: ['a', 'b'], answer: [0] };
-  const flash = { id: 'f', type: 'flashcard' as const, front: 'a', back: 'b' };
-  const right = { correct: true, grade: 'good' as const };
-  const wrong = { correct: false, grade: 'again' as const };
-
-  it('fast = easy, middle = good, last quarter = hard, wrong = again', () => {
-    expect(speedGrade(right, mcq, 10, 30)).toBe('easy');
-    expect(speedGrade(right, mcq, 15, 30)).toBe('easy');
-    expect(speedGrade(right, mcq, 20, 30)).toBe('good');
-    expect(speedGrade(right, mcq, 25, 30)).toBe('hard');
-    expect(speedGrade(wrong, mcq, 2, 30)).toBe('again');
-  });
-
-  it('flashcards keep the learner grade; no clock keeps the card grade', () => {
-    expect(speedGrade({ correct: true, grade: 'hard' }, flash, 2, 30)).toBe('hard');
-    expect(speedGrade({ correct: false, grade: 'again' }, flash, 2, 30)).toBe('again');
-    expect(speedGrade(right, mcq, 2, 0)).toBe('good');
   });
 });
 

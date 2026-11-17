@@ -23,6 +23,8 @@ export interface CardViewProps<C extends StudyCard = StudyCard> {
   autoPlay?: boolean;
   /** Small label above the card, e.g. which question a vocabulary entry produced. */
   label?: string;
+  /** The question's time is up: the card stays on screen but can no longer be answered. */
+  locked?: boolean;
 }
 
 /** Renders any card type. Give it a `key` per card so its internal state resets. */
@@ -34,7 +36,7 @@ export function CardView(props: CardViewProps) {
   const hasHint = card.type !== 'flashcard' && !!(card.hint || hintImage);
   const [hintOpen, setHintOpen] = useState(false);
   return (
-    <div className={`card card-${card.type}`}>
+    <div className={`card card-${card.type}`} inert={props.locked}>
       <div className="card-head">
         <span className="card-type">{props.label ?? CARD_KIND_LABELS[cardKind(card)]}</span>
         {/* In the header from the start: a hint is only useful before answering. */}

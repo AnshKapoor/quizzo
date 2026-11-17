@@ -1,15 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { FlashcardCard, Grade } from '../../types';
 import { CardAction, CheckButton, Explanation, SpeakButton } from '../common';
+import { GRADES } from '../GradePicker';
 import type { CardViewProps } from './CardView';
 import { useImageSrc } from '../ImageContext';
-
-const GRADES: { grade: Grade; label: string; key: string }[] = [
-  { grade: 'again', label: 'Again', key: '1' },
-  { grade: 'hard', label: 'Hard', key: '2' },
-  { grade: 'good', label: 'Good', key: '3' },
-  { grade: 'easy', label: 'Easy', key: '4' },
-];
 
 export function FlashcardView({ card, lang, onAnswer }: CardViewProps<FlashcardCard>) {
   const [revealed, setRevealed] = useState(false);

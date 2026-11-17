@@ -1,5 +1,5 @@
 // Pure helpers that return an updated copy of the library.
-import type { Card, Deck, Grade, Library, StudyItem } from '../types';
+import type { Card, CardProgress, Deck, Grade, Library, StudyItem } from '../types';
 import { isDue, schedule } from './srs';
 import { shuffle, uid } from './util';
 import { expandCard, expandDeck } from './vocab';
@@ -106,13 +106,30 @@ export const NEW_PER_SESSION = 10;
 export const QUIZ_SIZE = 10;
 
 /**
- * Review = due questions (oldest first) + a few new ones. Quiz = random sample, ignoring the schedule.
- * New questions from the same vocabulary entry are spread out rather than shown back to back.
+ * Random order, but questions that are new or due again come before the ones still waiting for
+ * their repetition (longest-waiting first). A quiz takes its questions from the front, so a
+ * question that was just answered doesn't come straight back while there are others to ask.
+ */
+export function freshFirst<T>(items: T[], progress: (it: T) => CardProgress | undefined, now = Date.now()): T[] {
+  const rank = (it: T) => {
+    const p = progress(it);
+    return p && p.due > now ? p.last : 0;
+  };
+  return shuffle(items)
+    .map((it) => ({ it, r: rank(it) }))
+    .sort((a, b) => a.r - b.r)
+    .map((x) => x.it);
+}
+
+/**
+ * Review = due questions (oldest first) + a few new ones. Quiz = random sample that leaves out
+ * recently answered questions while it can. New questions from the same vocabulary entry are
+ * spread out rather than shown back to back.
  */
 export function buildQueue(deck: Deck, lib: Library, mode: 'review' | 'quiz', now = Date.now()): StudyItem[] {
   const items = expandDeck(deck);
-  if (mode === 'quiz') return spreadOut(shuffle(items).slice(0, QUIZ_SIZE));
   const prog = (it: StudyItem) => lib.progress[progressKey(deck.id, it.key)];
+  if (mode === 'quiz') return spreadOut(shuffle(freshFirst(items, prog, now).slice(0, QUIZ_SIZE)));
   const due = items.filter((it) => isDue(prog(it), now)).sort((a, b) => prog(a)!.due - prog(b)!.due);
   const fresh = shuffle(items.filter((it) => !prog(it))).slice(0, NEW_PER_SESSION);
   return [...due, ...spreadOut(fresh)];
