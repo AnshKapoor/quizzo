@@ -33,14 +33,24 @@ export function checkTyped(input: string, accepted: string[], caseSensitive = fa
 
 export const isAccepted = (q: AnswerQuality) => q === 'exact' || q === 'umlaut';
 
+const cleanSentence = (s: string) =>
+  s
+    .normalize('NFC')
+    .toLocaleLowerCase('de')
+    .replace(/[.,!?;:"„“”]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 /** Sentence comparison for word-order cards: ignores case and punctuation. */
 export function sameSentence(a: string, b: string): boolean {
-  const clean = (s: string) =>
-    s
-      .normalize('NFC')
-      .toLocaleLowerCase('de')
-      .replace(/[.,!?;:"„“”]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  return clean(a) === clean(b);
+  return cleanSentence(a) === cleanSentence(b);
+}
+
+/**
+ * Which words of an attempt sit in the right place? Compares word by word, position by position,
+ * ignoring case and punctuation. Used to mark the misplaced words in a long sentence.
+ */
+export function wordPlacement(target: string, attempt: string[]): boolean[] {
+  const t = target.split(/\s+/).filter(Boolean);
+  return attempt.map((w, i) => i < t.length && cleanSentence(w) === cleanSentence(t[i]));
 }

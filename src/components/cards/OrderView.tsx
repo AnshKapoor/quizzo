@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { OrderCard } from '../../types';
-import { sameSentence } from '../../lib/answer';
+import { sameSentence, wordPlacement } from '../../lib/answer';
 import { shuffleIndexes } from '../../lib/util';
 import { CardAction, CheckButton, Explanation, Feedback, SpeakButton } from '../common';
 import { useDragDrop } from '../useDragDrop';
@@ -16,14 +16,25 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
   const [shown, setShown] = useState(solution);
 
   const check = () => {
-    const attempt = built.map((i) => card.tokens[i]).join(' ');
-    const match = [solution, ...(card.accept ?? [])].find((s) => sameSentence(s, attempt));
+    const attemptWords = built.map((i) => card.tokens[i]);
+    const attempt = attemptWords.join(' ');
+    const options = [solution, ...(card.accept ?? [])];
+    const match = options.find((s) => sameSentence(s, attempt));
     setResult(!!match);
-    if (match) setShown(match);
+    // Show the sentence the attempt came closest to, so the marked words below make sense.
+    const hits = (s: string) => wordPlacement(s, attemptWords).filter(Boolean).length;
+    setShown(match ?? options.reduce((best, s) => (hits(s) > hits(best) ? s : best), solution));
     onAnswer({ correct: !!match, grade: match ? 'good' : 'again' });
   };
 
   const locked = result !== null;
+  /** After checking: is each word of the learner's sentence in the right place? */
+  const placed = locked
+    ? wordPlacement(
+        shown,
+        built.map((i) => card.tokens[i]),
+      )
+    : [];
   // Words glide between the pool and the sentence.
   const flip = useFlip<HTMLDivElement>([built, locked]);
 
@@ -54,7 +65,7 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
             type="button"
             data-flip={i}
             data-drop={`w:${k}`}
-            className="token draggable"
+            className={`token draggable${locked ? (placed[k] ? ' placed-ok' : ' placed-bad') : ''}`}
             disabled={locked}
             onPointerDown={(e) => startDrag(e, i)}
             onClick={() => setBuilt((b) => b.filter((_, j) => j !== k))}
@@ -86,12 +97,13 @@ export function OrderView({ card, lang, onAnswer }: CardViewProps<OrderCard>) {
       )}
       {locked && (
         <Feedback correct={!!result}>
-          {!result && <span> Correct: {solution}</span>}
+          {!result && <span> Misplaced words are marked above.</span>}
         </Feedback>
       )}
       {locked && (
         <CardAction>
           <div className="example">
+            {!result && <strong>Correct: </strong>}
             {shown} <SpeakButton text={shown} lang={lang} />
           </div>
         </CardAction>
