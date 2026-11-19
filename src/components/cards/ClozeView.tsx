@@ -5,7 +5,7 @@ import { clozeSolution, parseCloze } from '../../lib/cloze';
 import { CardAction, CheckButton, Explanation, Feedback, SpeakButton, SpecialCharBar } from '../common';
 import type { CardViewProps } from './CardView';
 
-export function ClozeView({ card, lang, onAnswer }: CardViewProps<ClozeCard>) {
+export function ClozeView({ card, lang, onAnswer, autoPlay }: CardViewProps<ClozeCard>) {
   const segments = useMemo(() => parseCloze(card.text), [card]);
   const blanks = segments.filter((s) => s.kind === 'blank');
   const [values, setValues] = useState<string[]>(() => blanks.map(() => ''));
@@ -63,7 +63,9 @@ export function ClozeView({ card, lang, onAnswer }: CardViewProps<ClozeCard>) {
                 value={values[s.index]}
                 placeholder={s.hint ?? ''}
                 size={Math.max(4, (s.answers[0]?.length ?? 4) + 1)}
-                autoFocus={s.index === 0}
+                // Only when really answering. In the editor preview this input is re-created while the text is
+                // typed, and focusing it would pull the cursor out of the text box.
+                autoFocus={!!autoPlay && s.index === 0}
                 autoComplete="off"
                 autoCapitalize="off"
                 spellCheck={false}

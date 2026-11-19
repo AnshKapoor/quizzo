@@ -19,7 +19,7 @@ export interface CardViewProps<C extends StudyCard = StudyCard> {
   /** Target language code, e.g. 'de'. */
   lang: string;
   onAnswer: (r: AnswerResult) => void;
-  /** Play audio straight away (dictation). Off in the editor preview. */
+  /** Study and quizzes only (off in the editor preview): play audio straight away (dictation), focus the first blank (cloze). */
   autoPlay?: boolean;
   /** Small label above the card, e.g. which question a vocabulary entry produced. */
   label?: string;
