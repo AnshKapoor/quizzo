@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.10.1",
   "description": "Interactive flashcards with quiz-style card types (MCQ, matching, cloze, word order). German first.",
+  "author": "Illuminati Studio",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -42,6 +43,7 @@
   "build": {
     "appId": "app.quizzo",
     "productName": "Quizzo",
+    "copyright": "Copyright © Illuminati Studio",
     "directories": {
       "output": "release",
       "buildResources": "build"
