@@ -2,7 +2,7 @@ import { Fragment, useMemo, useRef, useState } from 'react';
 import type { ClozeCard } from '../../types';
 import { checkTyped, isAccepted, type AnswerQuality } from '../../lib/answer';
 import { clozeSolution, parseCloze } from '../../lib/cloze';
-import { CardAction, CheckButton, Explanation, Feedback, SpeakButton, SpecialCharBar } from '../common';
+import { CheckButton, Explanation, Feedback, SpeakButton, SpecialCharBar } from '../common';
 import type { CardViewProps } from './CardView';
 
 export function ClozeView({ card, lang, onAnswer, autoPlay }: CardViewProps<ClozeCard>) {
@@ -89,11 +89,34 @@ export function ClozeView({ card, lang, onAnswer, autoPlay }: CardViewProps<Cloz
         </Feedback>
       )}
       {results && (
-        <CardAction>
-          <div className="example">
-            {clozeSolution(card.text)} <SpeakButton text={clozeSolution(card.text)} lang={lang} />
+        <details className="answer-compare" open>
+          <summary>Your sentence vs expected</summary>
+          <div className="compare-grid">
+            <div className="compare-row">
+              <span className="compare-label">You</span>
+              <div className="compare-text">
+                {segments.map((s, k) => {
+                  if (s.kind === 'text') return <Fragment key={k}>{s.text}</Fragment>;
+                  const typed = values[s.index].trim();
+                  return (
+                    <span
+                      key={k}
+                      className={`compare-word ${isAccepted(results[s.index]) ? 'ok' : 'bad'}`}
+                    >
+                      {typed || '…'}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="compare-row">
+              <span className="compare-label">Expected</span>
+              <div className="compare-text">
+                {clozeSolution(card.text)} <SpeakButton text={clozeSolution(card.text)} lang={lang} />
+              </div>
+            </div>
           </div>
-        </CardAction>
+        </details>
       )}
       {results && <Explanation text={card.explanation} />}
     </div>

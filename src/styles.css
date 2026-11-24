@@ -499,6 +499,19 @@ kbd {
 .blank.correct { border-color: var(--ok); color: var(--ok); background: var(--ok-bg); }
 .blank.wrong { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); text-decoration: line-through; }
 .solution { font-size: 0.85rem; color: var(--ok); text-align: center; margin-top: 0.2rem; }
+/* cloze with a word bank: your sentence next to the expected one (stacked on narrow screens). */
+.answer-compare { margin: 0.75rem 0; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.answer-compare > summary { cursor: pointer; font-weight: 600; color: var(--muted); list-style: none; }
+.answer-compare > summary::-webkit-details-marker { display: none; }
+.answer-compare > summary::before { content: '▾ '; }
+.answer-compare:not([open]) > summary::before { content: '▸ '; }
+.compare-grid { display: grid; gap: 0.6rem; margin-top: 0.5rem; }
+@media (min-width: 560px) { .compare-grid { grid-template-columns: 1fr 1fr; } }
+.compare-label { display: block; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.compare-text { font-size: 1.05rem; line-height: 1.8; }
+.compare-word { padding: 0 0.2rem; border-radius: 4px; }
+.compare-word.ok { color: var(--ok); background: var(--ok-bg); }
+.compare-word.bad { color: var(--bad); background: var(--bad-bg); text-decoration: line-through; }
 .charbar { display: flex; gap: 0.35rem; flex-wrap: wrap; }
 .char-btn { min-width: 40px; padding: 0.3rem 0.6rem; }
 

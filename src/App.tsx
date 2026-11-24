@@ -30,7 +30,7 @@ import { Backup } from './screens/Backup';
 import { normalizeImages } from './lib/image';
 import { ImagesContext } from './components/ImageContext';
 import { resetTours, Tour, type TourId } from './components/Tour';
-import { backupPayload, CloudClient, defaultDeviceName, fingerprint } from './lib/cloud';
+import { backupPayload, CloudClient, CloudError, defaultDeviceName, fingerprint } from './lib/cloud';
 
 /** Auto backup waits this long after the last change, so a study session isn't uploaded answer by answer. */
 const AUTO_BACKUP_DELAY = 30_000;
@@ -74,12 +74,19 @@ export default function App() {
   const payloadHash = useMemo(() => (lib?.cloud?.url ? fingerprint(backupPayload(lib)) : ''), [lib]);
 
   /** Without a name: replaces this device's latest backup. With one: saves a separate, named backup. */
-  const cloudBackup = useCallback(async (name?: string) => {
+  const cloudBackup = useCallback(async (name?: string, automatic = false) => {
     const current = libRef.current;
     const cloud = current?.cloud;
     if (!current || !cloud?.url) throw new Error('Not connected to a Google Sheet');
     const hash = fingerprint(backupPayload(current));
-    const info = await new CloudClient(cloud).save(current, cloud.device?.trim() || defaultDeviceName(), name);
+    const client = new CloudClient(cloud);
+    // An older script adds a new row for every backup, so automatic backups would pile up in the Sheet.
+    if (automatic && (await client.scriptVersion()) < 3)
+      throw new CloudError(
+        'Automatic backup is off: the script in your Sheet is out of date, so every backup would add a new row. ' +
+          'Update the script (see "Update the script" in Backup), then back up again.',
+      );
+    const info = await client.save(current, cloud.device?.trim() || defaultDeviceName(), name);
     // A named backup is a snapshot on the side; the latest backup still has to follow the changes.
     if (name) return info;
     setAutoError(null);
@@ -91,7 +98,7 @@ export default function App() {
   useEffect(() => {
     if (!cloud?.auto || !cloud.url || !payloadHash || payloadHash === cloud.lastHash) return;
     const t = setTimeout(() => {
-      cloudBackup().catch((e: unknown) => setAutoError((e as Error).message));
+      cloudBackup(undefined, true).catch((e: unknown) => setAutoError((e as Error).message));
     }, AUTO_BACKUP_DELAY);
     return () => clearTimeout(t);
   }, [payloadHash, cloud?.auto, cloud?.url, cloud?.lastHash, cloudBackup]);

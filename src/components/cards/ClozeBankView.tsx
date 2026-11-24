@@ -3,7 +3,7 @@ import type { ClozeCard } from '../../types';
 import { checkTyped, isAccepted, type AnswerQuality } from '../../lib/answer';
 import { clozeSolution, parseCloze } from '../../lib/cloze';
 import { shuffle } from '../../lib/util';
-import { CardAction, CheckButton, Explanation, Feedback, SpeakButton } from '../common';
+import { CheckButton, Explanation, Feedback, SpeakButton } from '../common';
 import { useDragDrop } from '../useDragDrop';
 import { useFlip } from '../useFlip';
 import type { CardViewProps } from './CardView';
@@ -56,22 +56,24 @@ export function ClozeBankView({ card, lang, onAnswer }: CardViewProps<ClozeCard>
   return (
     <div className="card-body" ref={flip.ref}>
       {card.translation && <div className="sub translation">{card.translation}</div>}
-      {/* The word bank: a box above the text. It stays after checking so the card keeps its size. */}
-      <div className="order-pool word-bank" aria-label="Word bank">
-        {tiles.map((w, i) => (
-          <button
-            key={i}
-            type="button"
-            data-flip={i}
-            className={`token draggable ${filled.includes(i) ? 'used' : ''}`}
-            disabled={!!results || filled.includes(i)}
-            onPointerDown={(e) => !results && startDrag(e, i)}
-            onClick={() => fill(active, i)}
-          >
-            {w}
-          </button>
-        ))}
-      </div>
+      {/* The word bank: a box above the text. Gone once checked, to leave room to compare the answers. */}
+      {!results && (
+        <div className="order-pool word-bank" aria-label="Word bank">
+          {tiles.map((w, i) => (
+            <button
+              key={i}
+              type="button"
+              data-flip={i}
+              className={`token draggable ${filled.includes(i) ? 'used' : ''}`}
+              disabled={filled.includes(i)}
+              onPointerDown={(e) => startDrag(e, i)}
+              onClick={() => fill(active, i)}
+            >
+              {w}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="cloze">
         {segments.map((s, k) => {
           if (s.kind === 'text') return <Fragment key={k}>{s.text}</Fragment>;
@@ -98,14 +100,37 @@ export function ClozeBankView({ card, lang, onAnswer }: CardViewProps<ClozeCard>
       {!results && (
         <CheckButton disabled={filled.includes(null)} onClick={check} />
       )}
-      {results && <Feedback correct={correct} />}
       {results && (
-        <CardAction>
-          <div className="example">
-            {clozeSolution(card.text)} <SpeakButton text={clozeSolution(card.text)} lang={lang} />
+        <details className="answer-compare" open>
+          <summary>Your sentence vs expected</summary>
+          <div className="compare-grid">
+            <div className="compare-row">
+              <span className="compare-label">You</span>
+              <div className="compare-text">
+                {segments.map((s, k) => {
+                  if (s.kind === 'text') return <Fragment key={k}>{s.text}</Fragment>;
+                  const t = filled[s.index];
+                  return (
+                    <span
+                      key={k}
+                      className={`compare-word ${isAccepted(results[s.index]) ? 'ok' : 'bad'}`}
+                    >
+                      {t === null ? '…' : tiles[t]}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="compare-row">
+              <span className="compare-label">Expected</span>
+              <div className="compare-text">
+                {clozeSolution(card.text)} <SpeakButton text={clozeSolution(card.text)} lang={lang} />
+              </div>
+            </div>
           </div>
-        </CardAction>
+        </details>
       )}
+      {results && <Feedback correct={correct} />}
       {results && <Explanation text={card.explanation} />}
     </div>
   );

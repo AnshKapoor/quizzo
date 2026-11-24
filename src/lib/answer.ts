@@ -47,10 +47,18 @@ export function sameSentence(a: string, b: string): boolean {
 }
 
 /**
- * Which words of an attempt sit in the right place? Compares word by word, position by position,
- * ignoring case and punctuation. Used to mark the misplaced words in a long sentence.
+ * Which tokens of an attempt sit in the right place? A token may hold several words (e.g. "seinen Weg"),
+ * so the target is compared word by word and each token is right when all of its words are in place,
+ * ignoring case and punctuation. Used to mark the misplaced tokens in a long sentence.
  */
 export function wordPlacement(target: string, attempt: string[]): boolean[] {
-  const t = target.split(/\s+/).filter(Boolean);
-  return attempt.map((w, i) => i < t.length && cleanSentence(w) === cleanSentence(t[i]));
+  const words = (s: string) => s.split(/\s+/).filter(Boolean);
+  const t = words(target);
+  let pos = 0;
+  return attempt.map((token) => {
+    const w = words(token);
+    const ok = w.every((word, j) => pos + j < t.length && cleanSentence(word) === cleanSentence(t[pos + j]));
+    pos += w.length;
+    return ok;
+  });
 }
